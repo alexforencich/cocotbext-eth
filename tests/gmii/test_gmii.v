@@ -1,4 +1,4 @@
-"""
+/*
 
 Copyright (c) 2020 Alex Forencich
 
@@ -20,8 +20,26 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-"""
+*/
 
-from .gmii import GmiiFrame, GmiiSource, GmiiSink
-from .xgmii import XgmiiFrame, XgmiiSource, XgmiiSink
+// Language: Verilog 2001
 
+`timescale 1ns / 1ns
+
+/*
+ * GMII test
+ */
+module test_gmii #
+(
+    parameter DATA_WIDTH = 8
+)
+(
+    input  wire                   clk,
+    input  wire                   rst,
+
+    inout  wire [DATA_WIDTH-1:0]  gmii_d,
+    inout  wire                   gmii_er,
+    inout  wire                   gmii_en
+);
+
+endmodule
