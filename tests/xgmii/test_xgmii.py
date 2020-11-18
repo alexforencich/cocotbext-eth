@@ -45,10 +45,15 @@ class TB(object):
         self.log = SimLog(f"cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
+        self._enable_generator = None
+        self._enable_cr = None
+
         cocotb.fork(Clock(dut.clk, 2, units="ns").start())
 
-        self.source = XgmiiSource(dut, "xgmii", dut.clk, dut.rst)
-        self.sink = XgmiiSink(dut, "xgmii", dut.clk, dut.rst)
+        self.source = XgmiiSource(dut, "xgmii", dut.clk, dut.rst, dut.xgmii_clk_en)
+        self.sink = XgmiiSink(dut, "xgmii", dut.clk, dut.rst, dut.xgmii_clk_en)
+
+        dut.xgmii_clk_en.setimmediatevalue(1)
 
     async def reset(self):
         self.dut.rst.setimmediatevalue(0)
@@ -61,7 +66,25 @@ class TB(object):
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
-async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_dic=True, force_offset_start=False):
+    def set_enable_generator(self, generator=None):
+        if self._enable_cr is not None:
+            self._enable_cr.kill()
+            self._enable_cr = None
+
+        self._enable_generator = generator
+
+        if self._enable_generator is not None:
+            self._enable_cr = cocotb.fork(self._run_enable())
+
+    def clear_enable_generator(self):
+        self.set_enable_generator(None)
+
+    async def _run_enable(self):
+        for val in self._enable_generator:
+            self.dut.xgmii_clk_en <= val
+            await RisingEdge(self.dut.clk)
+
+async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_dic=True, force_offset_start=False, enable_gen=None):
 
     tb = TB(dut)
 
@@ -70,6 +93,9 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
     tb.source.ifg = ifg
     tb.source.enable_dic = enable_dic
     tb.source.force_offset_start = force_offset_start
+
+    if enable_gen is not None:
+        tb.set_enable_generator(enable_gen())
 
     await tb.reset()
 
@@ -91,7 +117,7 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
-async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, force_offset_start=False):
+async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, force_offset_start=False, enable_gen=False):
 
     tb = TB(dut)
 
@@ -101,9 +127,12 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, fo
     tb.source.enable_dic = enable_dic
     tb.source.force_offset_start = force_offset_start
 
-    await tb.reset()
+    if enable_gen is not None:
+        tb.set_enable_generator(enable_gen())
 
     for length in range(64, 96):
+
+        await tb.reset()
 
         test_frames = [payload_data(length) for k in range(10)]
         start_lane = []
@@ -155,8 +184,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, fo
 
         assert start_lane_ref == start_lane
 
-        for k in range(10):
-            await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
 
     assert tb.sink.empty()
 
@@ -169,6 +197,9 @@ def size_list():
 def incrementing_payload(length):
     return bytearray(itertools.islice(itertools.cycle(range(256)), length))
 
+def cycle_en():
+    return itertools.cycle([0, 0, 0, 1])
+
 if cocotb.SIM_NAME:
 
     factory = TestFactory(run_test)
@@ -177,6 +208,7 @@ if cocotb.SIM_NAME:
     factory.add_option("ifg", [12, 0])
     factory.add_option("enable_dic", [True, False])
     factory.add_option("force_offset_start", [False, True])
+    factory.add_option("enable_gen", [None, cycle_en])
     factory.generate_tests()
 
     factory = TestFactory(run_test_alignment)
@@ -184,6 +216,7 @@ if cocotb.SIM_NAME:
     factory.add_option("ifg", [12, 0])
     factory.add_option("enable_dic", [True, False])
     factory.add_option("force_offset_start", [False, True])
+    factory.add_option("enable_gen", [None, cycle_en])
     factory.generate_tests()
 
 
