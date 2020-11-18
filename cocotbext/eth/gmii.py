@@ -318,7 +318,7 @@ class GmiiSink(object):
                                 odd = not odd
                                 b = (n & 0x0F) << 4 | b >> 4
                                 be |= e
-                                if not sync and b == 0xD5:
+                                if not sync and b == EthPre.SFD:
                                     odd = True
                                     sync = True
                                 if odd:
