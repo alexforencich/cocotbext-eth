@@ -295,8 +295,8 @@ class GmiiSink(object):
 
             if self.enable is None or self.enable.value:
                 d_val = self.bus.d.value.integer
-                dv_val = self.bus.dv.value
-                er_val = 0 if self.bus.er is None else self.bus.er.value
+                dv_val = self.bus.dv.value.integer
+                er_val = 0 if self.bus.er is None else self.bus.er.value.integer
 
                 if frame is None:
                     if dv_val:
