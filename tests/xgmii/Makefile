@@ -54,8 +54,7 @@ else ifeq ($(SIM), verilator)
 	COMPILE_ARGS += -GCTRL_WIDTH=$(PARAM_CTRL_WIDTH)
 
 	ifeq ($(WAVES), 1)
-		COMPILE_ARGS += --trace
-		#COMPILE_ARGS += --trace-fst
+		COMPILE_ARGS += --trace-fst
 	endif
 endif
 

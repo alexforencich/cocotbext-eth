@@ -51,8 +51,7 @@ else ifeq ($(SIM), verilator)
 	#COMPILE_ARGS += -GDATA_WIDTH=$(PARAM_DATA_WIDTH)
 
 	ifeq ($(WAVES), 1)
-		COMPILE_ARGS += --trace
-		#COMPILE_ARGS += --trace-fst
+		COMPILE_ARGS += --trace-fst
 	endif
 endif
 
