@@ -24,12 +24,14 @@ THE SOFTWARE.
 """
 
 import itertools
+import logging
 import os
 
 import cocotb_test.simulator
 import pytest
 
 import cocotb
+from cocotb.log import SimLog
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 from cocotb.regression import TestFactory
@@ -39,6 +41,9 @@ from cocotbext.eth import XgmiiFrame, XgmiiSource, XgmiiSink
 class TB(object):
     def __init__(self, dut):
         self.dut = dut
+
+        self.log = SimLog(f"cocotb.tb")
+        self.log.setLevel(logging.DEBUG)
 
         cocotb.fork(Clock(dut.clk, 2, units="ns").start())
 
@@ -116,8 +121,8 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, fo
 
             start_lane.append(rx_frame.rx_start_lane)
 
-        print(length)
-        print(start_lane)
+        tb.log.info(f"length: {length}")
+        tb.log.info(f"start_lane: {start_lane}")
 
         start_lane_ref = []
 
@@ -146,7 +151,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, fo
                     offset += 4
                 lane = (lane - offset) % byte_width
 
-        print(start_lane_ref)
+        tb.log.info(f"start_lane_ref: {start_lane_ref}")
 
         assert start_lane_ref == start_lane
 
