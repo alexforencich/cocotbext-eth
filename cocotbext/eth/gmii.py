@@ -93,12 +93,13 @@ class GmiiSource(object):
     _signals = ["d"]
     _optional_signals = ["er", "en", "dv"]
 
-    def __init__(self, entity, name, clock, reset=None, enable=None, *args, **kwargs):
+    def __init__(self, entity, name, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
         self.entity = entity
         self.clock = clock
         self.reset = reset
         self.enable = enable
+        self.mii_select = mii_select
         self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         super().__init__(*args, **kwargs)
@@ -183,6 +184,18 @@ class GmiiSource(object):
                     self.queue_occupancy_frames -= 1
                     self.log.info(f"TX frame: {frame}")
                     frame.normalize()
+
+                    if self.mii_select is not None and self.mii_select.value:
+                        mii_data = []
+                        mii_error = []
+                        for b, e in zip(frame.data, frame.error):
+                            mii_data.append(b & 0x0F)
+                            mii_data.append(b >> 4)
+                            mii_error.append(e)
+                            mii_error.append(e)
+                        frame.data = mii_data
+                        frame.error = mii_error
+
                     self.active = True
 
                 if frame is not None:
@@ -207,12 +220,13 @@ class GmiiSink(object):
     _signals = ["d"]
     _optional_signals = ["er", "en", "dv"]
 
-    def __init__(self, entity, name, clock, reset=None, enable=None, *args, **kwargs):
+    def __init__(self, entity, name, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
         self.entity = entity
         self.clock = clock
         self.reset = reset
         self.enable = enable
+        self.mii_select = mii_select
         self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         super().__init__(*args, **kwargs)
@@ -292,6 +306,27 @@ class GmiiSink(object):
                 else:
                     if not dv_val:
                         # end of frame
+
+                        if self.mii_select is not None and self.mii_select.value:
+                            odd = True
+                            sync = False
+                            b = 0
+                            be = 0
+                            data = bytearray()
+                            error = []
+                            for n, e in zip(frame.data, frame.error):
+                                odd = not odd
+                                b = (n & 0x0F) << 4 | b >> 4
+                                be |= e
+                                if not sync and b == 0xD5:
+                                    odd = True
+                                    sync = True
+                                if odd:
+                                    data.append(b)
+                                    error.append(be)
+                                    be = 0
+                            frame.data = data
+                            frame.error = error
 
                         frame.compact()
                         self.log.info(f"RX frame: {frame}")

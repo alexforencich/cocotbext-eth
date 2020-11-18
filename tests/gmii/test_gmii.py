@@ -45,10 +45,16 @@ class TB(object):
         self.log = SimLog(f"cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
+        self._enable_generator = None
+        self._enable_cr = None
+
         cocotb.fork(Clock(dut.clk, 2, units="ns").start())
 
-        self.source = GmiiSource(dut, "gmii", dut.clk, dut.rst)
-        self.sink = GmiiSink(dut, "gmii", dut.clk, dut.rst)
+        self.source = GmiiSource(dut, "gmii", dut.clk, dut.rst, dut.gmii_clk_en, dut.gmii_mii_sel)
+        self.sink = GmiiSink(dut, "gmii", dut.clk, dut.rst, dut.gmii_clk_en, dut.gmii_mii_sel)
+
+        dut.gmii_clk_en.setimmediatevalue(1)
+        dut.gmii_mii_sel.setimmediatevalue(0)
 
     async def reset(self):
         self.dut.rst.setimmediatevalue(0)
@@ -61,13 +67,35 @@ class TB(object):
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
-async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12):
+    def set_enable_generator(self, generator=None):
+        if self._enable_cr is not None:
+            self._enable_cr.kill()
+            self._enable_cr = None
+
+        self._enable_generator = generator
+
+        if self._enable_generator is not None:
+            self._enable_cr = cocotb.fork(self._run_enable())
+
+    def clear_enable_generator(self):
+        self.set_enable_generator(None)
+
+    async def _run_enable(self):
+        for val in self._enable_generator:
+            self.dut.gmii_clk_en <= val
+            await RisingEdge(self.dut.clk)
+
+async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_gen=None, mii_sel=False):
 
     tb = TB(dut)
 
     byte_width = tb.source.width // 8
 
     tb.source.ifg = ifg
+    tb.dut.gmii_mii_sel <= mii_sel
+
+    if enable_gen is not None:
+        tb.set_enable_generator(enable_gen())
 
     await tb.reset()
 
@@ -95,12 +123,17 @@ def size_list():
 def incrementing_payload(length):
     return bytearray(itertools.islice(itertools.cycle(range(256)), length))
 
+def cycle_en():
+    return itertools.cycle([0, 0, 0, 1])
+
 if cocotb.SIM_NAME:
 
     factory = TestFactory(run_test)
     factory.add_option("payload_lengths", [size_list])
     factory.add_option("payload_data", [incrementing_payload])
     factory.add_option("ifg", [12, 0])
+    factory.add_option("enable_gen", [None, cycle_en])
+    factory.add_option("mii_sel", [False, True])
     factory.generate_tests()
 
 

@@ -39,7 +39,9 @@ module test_gmii #
 
     inout  wire [DATA_WIDTH-1:0]  gmii_d,
     inout  wire                   gmii_er,
-    inout  wire                   gmii_en
+    inout  wire                   gmii_en,
+    inout  wire                   gmii_clk_en,
+    inout  wire                   gmii_mii_sel
 );
 
 endmodule
