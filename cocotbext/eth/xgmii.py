@@ -55,11 +55,14 @@ class XgmiiFrame(object):
         data.extend(payload)
         return cls(data)
 
+    def get_preamble_len(self):
+        return self.data.index(EthPre.SFD)+1
+
     def get_preamble(self):
-        return self.data[0:8]
+        return self.data[0:self.get_preamble_len()]
 
     def get_payload(self):
-        return self.data[8:]
+        return self.data[self.get_preamble_len():]
 
     def normalize(self):
         n = len(self.data)
