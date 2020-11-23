@@ -30,6 +30,7 @@ from cocotb.utils import get_sim_time
 
 from collections import deque
 
+from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE
 
 class GmiiFrame(object):
@@ -101,6 +102,11 @@ class GmiiSource(object):
         self.enable = enable
         self.mii_select = mii_select
         self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
+
+        self.log.info("GMII source")
+        self.log.info("cocotbext-eth version %s", __version__)
+        self.log.info("Copyright (c) 2020 Alex Forencich")
+        self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
 
@@ -228,6 +234,11 @@ class GmiiSink(object):
         self.enable = enable
         self.mii_select = mii_select
         self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
+
+        self.log.info("GMII sink")
+        self.log.info("cocotbext-eth version %s", __version__)
+        self.log.info("Copyright (c) 2020 Alex Forencich")
+        self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
 
