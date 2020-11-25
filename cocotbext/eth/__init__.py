@@ -26,4 +26,3 @@ from .version import __version__
 
 from .gmii import GmiiFrame, GmiiSource, GmiiSink
 from .xgmii import XgmiiFrame, XgmiiSource, XgmiiSink
-

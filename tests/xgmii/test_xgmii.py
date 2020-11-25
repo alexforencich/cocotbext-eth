@@ -38,11 +38,12 @@ from cocotb.regression import TestFactory
 
 from cocotbext.eth import XgmiiFrame, XgmiiSource, XgmiiSink
 
+
 class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        self.log = SimLog(f"cocotb.tb")
+        self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
         self._enable_generator = None
@@ -84,11 +85,11 @@ class TB(object):
             self.dut.xgmii_clk_en <= val
             await RisingEdge(self.dut.clk)
 
-async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_dic=True, force_offset_start=False, enable_gen=None):
+
+async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_dic=True,
+        force_offset_start=False, enable_gen=None):
 
     tb = TB(dut)
-
-    byte_width = tb.source.width // 8
 
     tb.source.ifg = ifg
     tb.source.enable_dic = enable_dic
@@ -99,7 +100,7 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
 
     await tb.reset()
 
-    test_frames = [payload_data(l) for l in payload_lengths()]
+    test_frames = [payload_data(x) for x in payload_lengths()]
 
     for test_data in test_frames:
         test_frame = XgmiiFrame.from_payload(test_data)
@@ -117,7 +118,9 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
-async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, force_offset_start=False, enable_gen=False):
+
+async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
+        force_offset_start=False, enable_gen=False):
 
     tb = TB(dut)
 
@@ -150,8 +153,8 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, fo
 
             start_lane.append(rx_frame.rx_start_lane)
 
-        tb.log.info(f"length: {length}")
-        tb.log.info(f"start_lane: {start_lane}")
+        tb.log.info("length: %d", length)
+        tb.log.info("start_lane: %s", start_lane)
 
         start_lane_ref = []
 
@@ -180,7 +183,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, fo
                     offset += 4
                 lane = (lane - offset) % byte_width
 
-        tb.log.info(f"start_lane_ref: {start_lane_ref}")
+        tb.log.info("start_lane_ref: %s", start_lane_ref)
 
         assert start_lane_ref == start_lane
 
@@ -191,14 +194,18 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True, fo
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
+
 def size_list():
-    return list(range(64, 128))+[512, 1514, 9214]+[64]*10+[65]*10+[66]*10+[67]*10
+    return list(range(64, 128)) + [512, 1514, 9214] + [64]*10 + [65]*10 + [66]*10 + [67]*10
+
 
 def incrementing_payload(length):
     return bytearray(itertools.islice(itertools.cycle(range(256)), length))
 
+
 def cycle_en():
     return itertools.cycle([0, 0, 0, 1])
+
 
 if cocotb.SIM_NAME:
 
@@ -220,8 +227,11 @@ if cocotb.SIM_NAME:
     factory.generate_tests()
 
 
+# cocotb-test
+
 tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
+
 
 @pytest.mark.parametrize("data_width", [32, 64])
 def test_xgmii(request, data_width):
@@ -238,7 +248,7 @@ def test_xgmii(request, data_width):
     parameters['DATA_WIDTH'] = data_width
     parameters['CTRL_WIDTH'] = parameters['DATA_WIDTH'] // 8
 
-    extra_env = {f'PARAM_{k}' : str(v) for k, v in parameters.items()}
+    extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 
     sim_build = os.path.join(tests_dir,
         "sim_build_"+request.node.name.replace('[', '-').replace(']', ''))
@@ -252,4 +262,3 @@ def test_xgmii(request, data_width):
         sim_build=sim_build,
         extra_env=extra_env,
     )
-

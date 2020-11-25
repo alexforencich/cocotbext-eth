@@ -28,7 +28,6 @@ import logging
 import os
 
 import cocotb_test.simulator
-import pytest
 
 import cocotb
 from cocotb.log import SimLog
@@ -38,11 +37,12 @@ from cocotb.regression import TestFactory
 
 from cocotbext.eth import GmiiFrame, GmiiSource, GmiiSink
 
+
 class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        self.log = SimLog(f"cocotb.tb")
+        self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
         self._enable_generator = None
@@ -85,11 +85,10 @@ class TB(object):
             self.dut.gmii_clk_en <= val
             await RisingEdge(self.dut.clk)
 
+
 async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_gen=None, mii_sel=False):
 
     tb = TB(dut)
-
-    byte_width = tb.source.width // 8
 
     tb.source.ifg = ifg
     tb.dut.gmii_mii_sel <= mii_sel
@@ -99,7 +98,7 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
 
     await tb.reset()
 
-    test_frames = [payload_data(l) for l in payload_lengths()]
+    test_frames = [payload_data(x) for x in payload_lengths()]
 
     for test_data in test_frames:
         test_frame = GmiiFrame.from_payload(test_data)
@@ -117,14 +116,18 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
+
 def size_list():
-    return list(range(64, 128))+[512, 1514, 9214]+[64]*10
+    return list(range(64, 128)) + [512, 1514, 9214] + [64]*10
+
 
 def incrementing_payload(length):
     return bytearray(itertools.islice(itertools.cycle(range(256)), length))
 
+
 def cycle_en():
     return itertools.cycle([0, 0, 0, 1])
+
 
 if cocotb.SIM_NAME:
 
@@ -137,8 +140,11 @@ if cocotb.SIM_NAME:
     factory.generate_tests()
 
 
+# cocotb-test
+
 tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
+
 
 def test_gmii(request):
     dut = "test_gmii"
@@ -151,9 +157,7 @@ def test_gmii(request):
 
     parameters = {}
 
-    # parameters['DATA_WIDTH'] = data_width
-
-    extra_env = {f'PARAM_{k}' : str(v) for k, v in parameters.items()}
+    extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 
     sim_build = os.path.join(tests_dir,
         "sim_build_"+request.node.name.replace('[', '-').replace(']', ''))
@@ -167,4 +171,3 @@ def test_gmii(request):
         sim_build=sim_build,
         extra_env=extra_env,
     )
-

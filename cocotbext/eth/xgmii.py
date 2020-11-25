@@ -33,6 +33,7 @@ from collections import deque
 from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE, XgmiiCtrl
 
+
 class XgmiiFrame(object):
     def __init__(self, data=None, ctrl=None):
         self.data = bytearray()
@@ -82,11 +83,11 @@ class XgmiiFrame(object):
 
     def __repr__(self):
         return (
-                f"{type(self).__name__}(data={repr(self.data)}, " +
-                f"ctrl={repr(self.ctrl)}, " +
-                f"rx_sim_time={repr(self.rx_sim_time)}, " +
-                f"rx_start_lane={repr(self.rx_start_lane)})"
-            )
+            f"{type(self).__name__}(data={repr(self.data)}, "
+            f"ctrl={repr(self.ctrl)}, "
+            f"rx_sim_time={repr(self.rx_sim_time)}, "
+            f"rx_start_lane={repr(self.rx_start_lane)})"
+        )
 
     def __len__(self):
         return len(self.data)
@@ -200,7 +201,7 @@ class XgmiiSource(object):
                         frame = self.queue.popleft()
                         self.queue_occupancy_bytes -= len(frame)
                         self.queue_occupancy_frames -= 1
-                        self.log.info(f"TX frame: {frame}")
+                        self.log.info("TX frame: %s", frame)
                         frame.normalize()
                         assert frame.data[0] == EthPre.PRE
                         assert frame.ctrl[0] == 0
@@ -210,7 +211,12 @@ class XgmiiSource(object):
                         frame.ctrl.append(1)
 
                         # offset start
-                        if (self.byte_width > 4 and ifg_cnt > (3-deficit_idle_cnt if self.enable_dic else 0)) or self.force_offset_start:
+                        if self.enable_dic:
+                            min_ifg = 3 - deficit_idle_cnt
+                        else:
+                            min_ifg = 0
+
+                        if self.byte_width > 4 and (ifg_cnt > min_ifg or self.force_offset_start):
                             ifg_cnt = ifg_cnt-4
                             frame.data = bytearray([XgmiiCtrl.IDLE]*4)+frame.data
                             frame.ctrl = [1]*4+frame.ctrl
@@ -343,7 +349,7 @@ class XgmiiSink(object):
                                 frame.ctrl.append(c_val)
 
                             frame.compact()
-                            self.log.info(f"RX frame: {frame}")
+                            self.log.info("RX frame: %s", frame)
 
                             self.queue_occupancy_bytes += len(frame)
                             self.queue_occupancy_frames += 1
@@ -361,4 +367,3 @@ class XgmiiSink(object):
 
 class XgmiiMonitor(XgmiiSink):
     pass
-

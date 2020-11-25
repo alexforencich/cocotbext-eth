@@ -31,15 +31,10 @@ TOPLEVEL = $(DUT)
 MODULE   = $(DUT)
 VERILOG_SOURCES += $(DUT).v
 
-# module parameters
-# export PARAM_DATA_WIDTH ?= 64
-
 SIM_BUILD ?= sim_build_$(MODULE)
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
-
-	#COMPILE_ARGS += -P $(TOPLEVEL).DATA_WIDTH=$(PARAM_DATA_WIDTH)
 
 	ifeq ($(WAVES), 1)
 		VERILOG_SOURCES += iverilog_dump.v
@@ -47,8 +42,6 @@ ifeq ($(SIM), icarus)
 	endif
 else ifeq ($(SIM), verilator)
 	COMPILE_ARGS += -Wno-SELRANGE -Wno-WIDTH
-
-	#COMPILE_ARGS += -GDATA_WIDTH=$(PARAM_DATA_WIDTH)
 
 	ifeq ($(WAVES), 1)
 		COMPILE_ARGS += --trace-fst

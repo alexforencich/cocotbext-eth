@@ -24,12 +24,17 @@ THE SOFTWARE.
 
 import enum
 
+
+# Ethernet frame
 class EthPre(enum.IntEnum):
     PRE = 0x55
     SFD = 0xD5
 
+
 ETH_PREAMBLE = b'\x55\x55\x55\x55\x55\x55\x55\xd5'
 
+
+# XGMII control characters
 class XgmiiCtrl(enum.IntEnum):
     IDLE   = 0x07
     LPI    = 0x06
@@ -45,6 +50,8 @@ class XgmiiCtrl(enum.IntEnum):
     RES5   = 0xf7
     SIG_OS = 0x5c
 
+
+# BASE-R control characters
 class BaseRCtrl(enum.IntEnum):
     IDLE  = 0x00
     LPI   = 0x06
@@ -56,14 +63,20 @@ class BaseRCtrl(enum.IntEnum):
     RES_4 = 0x66
     RES_5 = 0x78
 
+
+# BASE-R O codes
 class BaseRO(enum.IntEnum):
     SEQ_OS = 0x0
     SIG_OS = 0xf
 
+
+# BASE-R sync header
 class BaseRSync(enum.IntEnum):
     DATA = 0b10
     CTRL = 0b01
 
+
+# BASE-R block type field
 class BaseRBlockType(enum.IntEnum):
     CTRL     = 0x1e  # C7 C6 C5 C4 C3 C2 C1 C0 BT
     OS_4     = 0x2d  # D7 D6 D5 O4 C3 C2 C1 C0 BT
@@ -80,4 +93,3 @@ class BaseRBlockType(enum.IntEnum):
     TERM_5   = 0xd2  # C7 C6    D4 D3 D2 D1 D0 BT
     TERM_6   = 0xe1  # C7    D5 D4 D3 D2 D1 D0 BT
     TERM_7   = 0xff  #    D6 D5 D4 D3 D2 D1 D0 BT
-

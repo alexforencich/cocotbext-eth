@@ -33,6 +33,7 @@ from collections import deque
 from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE
 
+
 class GmiiFrame(object):
     def __init__(self, data=None, error=None):
         self.data = bytearray()
@@ -80,10 +81,10 @@ class GmiiFrame(object):
 
     def __repr__(self):
         return (
-                f"{type(self).__name__}(data={repr(self.data)}, " +
-                f"error={repr(self.error)}, " +
-                f"rx_sim_time={repr(self.rx_sim_time)})"
-            )
+            f"{type(self).__name__}(data={repr(self.data)}, "
+            f"error={repr(self.error)}, "
+            f"rx_sim_time={repr(self.rx_sim_time)})"
+        )
 
     def __len__(self):
         return len(self.data)
@@ -191,7 +192,7 @@ class GmiiSource(object):
                     frame = self.queue.popleft()
                     self.queue_occupancy_bytes -= len(frame)
                     self.queue_occupancy_frames -= 1
-                    self.log.info(f"TX frame: {frame}")
+                    self.log.info("TX frame: %s", frame)
                     frame.normalize()
 
                     if self.mii_select is not None and self.mii_select.value:
@@ -343,7 +344,7 @@ class GmiiSink(object):
                             frame.error = error
 
                         frame.compact()
-                        self.log.info(f"RX frame: {frame}")
+                        self.log.info("RX frame: %s", frame)
 
                         self.queue_occupancy_bytes += len(frame)
                         self.queue_occupancy_frames += 1
@@ -362,4 +363,3 @@ class GmiiSink(object):
 
 class GmiiMonitor(GmiiSink):
     pass
-
