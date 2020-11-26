@@ -119,7 +119,7 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
 
 
 def size_list():
-    return list(range(64, 128)) + [512, 1514, 9214] + [64]*10
+    return list(range(60, 128)) + [512, 1514, 9214] + [60]*10
 
 
 def incrementing_payload(length):

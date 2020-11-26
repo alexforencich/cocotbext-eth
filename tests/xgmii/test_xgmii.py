@@ -110,6 +110,7 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
         rx_frame = tb.sink.recv()
 
         assert rx_frame.get_payload() == test_data
+        assert rx_frame.check_fcs()
         assert rx_frame.ctrl is None
 
     assert tb.sink.empty()
@@ -132,7 +133,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
     if enable_gen is not None:
         tb.set_enable_generator(enable_gen())
 
-    for length in range(64, 96):
+    for length in range(60, 92):
 
         await tb.reset()
 
@@ -148,6 +149,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
             rx_frame = tb.sink.recv()
 
             assert rx_frame.get_payload() == test_data
+            assert rx_frame.check_fcs()
             assert rx_frame.ctrl is None
 
             start_lane.append(rx_frame.rx_start_lane)
@@ -168,7 +170,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
                 lane = 4
 
             start_lane_ref.append(lane)
-            lane = (lane + len(test_data)+ifg) % byte_width
+            lane = (lane + len(test_data)+4+ifg) % byte_width
 
             if enable_dic:
                 offset = lane % 4
@@ -195,7 +197,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
 
 
 def size_list():
-    return list(range(64, 128)) + [512, 1514, 9214] + [64]*10 + [65]*10 + [66]*10 + [67]*10
+    return list(range(60, 128)) + [512, 1514, 9214] + [60]*10 + [61]*10 + [62]*10 + [63]*10
 
 
 def incrementing_payload(length):

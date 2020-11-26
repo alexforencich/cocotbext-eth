@@ -23,6 +23,8 @@ THE SOFTWARE.
 """
 
 import logging
+import struct
+import zlib
 from collections import deque
 
 import cocotb
@@ -48,9 +50,11 @@ class GmiiFrame(object):
             self.error = error
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload, add_fcs=True):
         data = bytearray(ETH_PREAMBLE)
         data.extend(payload)
+        if add_fcs:
+            data.extend(struct.pack('<L', zlib.crc32(payload)))
         return cls(data)
 
     def get_preamble_len(self):
@@ -59,8 +63,17 @@ class GmiiFrame(object):
     def get_preamble(self):
         return self.data[0:self.get_preamble_len()]
 
-    def get_payload(self):
-        return self.data[self.get_preamble_len():]
+    def get_payload(self, strip_fcs=True):
+        if strip_fcs:
+            return self.data[self.get_preamble_len():-4]
+        else:
+            return self.data[self.get_preamble_len():]
+
+    def get_fcs(self):
+        return self.data[-4:]
+
+    def check_fcs(self):
+        return self.get_fcs() == struct.pack('<L', zlib.crc32(self.get_payload(strip_fcs=True)))
 
     def normalize(self):
         n = len(self.data)
