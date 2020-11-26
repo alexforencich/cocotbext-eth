@@ -22,13 +22,12 @@ THE SOFTWARE.
 
 """
 
+import logging
+from collections import deque
+
 import cocotb
 from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer, First, Event
-from cocotb.bus import Bus
-from cocotb.log import SimLog
 from cocotb.utils import get_sim_time
-
-from collections import deque
 
 from .version import __version__
 from .gmii import GmiiFrame
@@ -37,17 +36,14 @@ from .constants import EthPre
 
 class RgmiiSource(object):
 
-    _signals = ["d", "ctl"]
-    _optional_signals = []
-
-    def __init__(self, entity, name, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
-        self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
-        self.entity = entity
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+        self.log = logging.getLogger(f"cocotb.{data._path}")
+        self.data = data
+        self.ctrl = ctrl
         self.clock = clock
         self.reset = reset
         self.enable = enable
         self.mii_select = mii_select
-        self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         self.log.info("RGMII source")
         self.log.info("cocotbext-eth version %s", __version__)
@@ -69,10 +65,10 @@ class RgmiiSource(object):
 
         self.reset = reset
 
-        assert len(self.bus.d) == 4
-        self.bus.d.setimmediatevalue(0)
-        assert len(self.bus.ctl) == 1
-        self.bus.ctl.setimmediatevalue(0)
+        assert len(self.data) == 4
+        self.data.setimmediatevalue(0)
+        assert len(self.ctrl) == 1
+        self.ctrl.setimmediatevalue(0)
 
         cocotb.fork(self._run())
 
@@ -111,16 +107,16 @@ class RgmiiSource(object):
                 frame = None
                 ifg_cnt = 0
                 self.active = False
-                self.bus.d <= 0
-                self.bus.ctl <= 0
+                self.data <= 0
+                self.ctrl <= 0
                 continue
 
             await RisingEdge(self.clock)
 
             if self.mii_select is None or not self.mii_select.value:
                 # send high nibble after rising edge, leading in to falling edge
-                self.bus.d <= d >> 4
-                self.bus.ctl <= en ^ er
+                self.data <= d >> 4
+                self.ctrl <= en ^ er
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt > 0:
@@ -165,23 +161,20 @@ class RgmiiSource(object):
             await FallingEdge(self.clock)
 
             # send low nibble after falling edge, leading in to rising edge
-            self.bus.d <= d & 0x0F
-            self.bus.ctl <= en
+            self.data <= d & 0x0F
+            self.ctrl <= en
 
 
 class RgmiiSink(object):
 
-    _signals = ["d", "ctl"]
-    _optional_signals = []
-
-    def __init__(self, entity, name, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
-        self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
-        self.entity = entity
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+        self.log = logging.getLogger(f"cocotb.{data._path}")
+        self.data = data
+        self.ctrl = ctrl
         self.clock = clock
         self.reset = reset
         self.enable = enable
         self.mii_select = mii_select
-        self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         self.log.info("RGMII sink")
         self.log.info("cocotbext-eth version %s", __version__)
@@ -202,8 +195,8 @@ class RgmiiSink(object):
 
         self.reset = reset
 
-        assert len(self.bus.d) == 4
-        assert len(self.bus.ctl) == 1
+        assert len(self.data) == 4
+        assert len(self.ctrl) == 1
 
         cocotb.fork(self._run())
 
@@ -250,8 +243,8 @@ class RgmiiSink(object):
                 continue
 
             # capture high nibble after rising edge, leading in to falling edge
-            d_val |= self.bus.d.value.integer << 4
-            er_val = dv_val ^ self.bus.ctl.value.integer
+            d_val |= self.data.value.integer << 4
+            er_val = dv_val ^ self.ctrl.value.integer
 
             if self.enable is None or self.enable.value:
 
@@ -304,8 +297,8 @@ class RgmiiSink(object):
             await ReadOnly()
 
             # capture low nibble after falling edge, leading in to rising edge
-            d_val = self.bus.d.value.integer
-            dv_val = self.bus.ctl.value.integer
+            d_val = self.data.value.integer
+            dv_val = self.ctrl.value.integer
 
             await RisingEdge(self.clock)
 

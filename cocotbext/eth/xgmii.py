@@ -22,13 +22,12 @@ THE SOFTWARE.
 
 """
 
+import logging
+from collections import deque
+
 import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly, Timer, First, Event
-from cocotb.bus import Bus
-from cocotb.log import SimLog
 from cocotb.utils import get_sim_time
-
-from collections import deque
 
 from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE, XgmiiCtrl
@@ -98,16 +97,13 @@ class XgmiiFrame(object):
 
 class XgmiiSource(object):
 
-    _signals = ["d", "c"]
-    _optional_signals = []
-
-    def __init__(self, entity, name, clock, reset=None, enable=None, *args, **kwargs):
-        self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
-        self.entity = entity
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
+        self.log = logging.getLogger(f"cocotb.{data._path}")
+        self.data = data
+        self.ctrl = ctrl
         self.clock = clock
         self.reset = reset
         self.enable = enable
-        self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         self.log.info("XGMII source")
         self.log.info("cocotbext-eth version %s", __version__)
@@ -126,8 +122,8 @@ class XgmiiSource(object):
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
-        self.width = len(self.bus.d)
-        self.byte_width = len(self.bus.c)
+        self.width = len(self.data)
+        self.byte_width = len(self.ctrl)
 
         self.reset = reset
 
@@ -140,8 +136,8 @@ class XgmiiSource(object):
             self.idle_d |= XgmiiCtrl.IDLE << k*8
             self.idle_c |= 1 << k
 
-        self.bus.d.setimmediatevalue(0)
-        self.bus.c.setimmediatevalue(0)
+        self.data.setimmediatevalue(0)
+        self.ctrl.setimmediatevalue(0)
 
         cocotb.fork(self._run())
 
@@ -179,8 +175,8 @@ class XgmiiSource(object):
                 ifg_cnt = 0
                 deficit_idle_cnt = 0
                 self.active = False
-                self.bus.d <= 0
-                self.bus.c <= 0
+                self.data <= 0
+                self.ctrl <= 0
                 continue
 
             await RisingEdge(self.clock)
@@ -246,26 +242,23 @@ class XgmiiSource(object):
                             d_val |= XgmiiCtrl.IDLE << k*8
                             c_val |= 1 << k
 
-                    self.bus.d <= d_val
-                    self.bus.c <= c_val
+                    self.data <= d_val
+                    self.ctrl <= c_val
                 else:
-                    self.bus.d <= self.idle_d
-                    self.bus.c <= self.idle_c
+                    self.data <= self.idle_d
+                    self.ctrl <= self.idle_c
                     self.active = False
 
 
 class XgmiiSink(object):
 
-    _signals = ["d", "c"]
-    _optional_signals = []
-
-    def __init__(self, entity, name, clock, reset=None, enable=None, *args, **kwargs):
-        self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
-        self.entity = entity
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
+        self.log = logging.getLogger(f"cocotb.{data._path}")
+        self.data = data
+        self.ctrl = ctrl
         self.clock = clock
         self.reset = reset
         self.enable = enable
-        self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         self.log.info("XGMII sink")
         self.log.info("cocotbext-eth version %s", __version__)
@@ -281,8 +274,8 @@ class XgmiiSink(object):
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
-        self.width = len(self.bus.d)
-        self.byte_width = len(self.bus.c)
+        self.width = len(self.data)
+        self.byte_width = len(self.ctrl)
 
         self.reset = reset
 
@@ -331,8 +324,8 @@ class XgmiiSink(object):
 
             if self.enable is None or self.enable.value:
                 for offset in range(self.byte_width):
-                    d_val = (self.bus.d.value.integer >> (offset*8)) & 0xff
-                    c_val = (self.bus.c.value.integer >> offset) & 1
+                    d_val = (self.data.value.integer >> (offset*8)) & 0xff
+                    c_val = (self.ctrl.value.integer >> offset) & 1
 
                     if frame is None:
                         if c_val and d_val == XgmiiCtrl.START:

@@ -30,7 +30,6 @@ import os
 import cocotb_test.simulator
 
 import cocotb
-from cocotb.log import SimLog
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 from cocotb.regression import TestFactory
@@ -42,7 +41,7 @@ class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        self.log = SimLog("cocotb.tb")
+        self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
         self._enable_generator = None
@@ -50,8 +49,10 @@ class TB(object):
 
         cocotb.fork(Clock(dut.clk, 2, units="ns").start())
 
-        self.source = GmiiSource(dut, "gmii", dut.clk, dut.rst, dut.gmii_clk_en, dut.gmii_mii_sel)
-        self.sink = GmiiSink(dut, "gmii", dut.clk, dut.rst, dut.gmii_clk_en, dut.gmii_mii_sel)
+        self.source = GmiiSource(dut.gmii_d, dut.gmii_er, dut.gmii_en,
+            dut.clk, dut.rst, dut.gmii_clk_en, dut.gmii_mii_sel)
+        self.sink = GmiiSink(dut.gmii_d, dut.gmii_er, dut.gmii_en,
+            dut.clk, dut.rst, dut.gmii_clk_en, dut.gmii_mii_sel)
 
         dut.gmii_clk_en.setimmediatevalue(1)
         dut.gmii_mii_sel.setimmediatevalue(0)

@@ -22,13 +22,12 @@ THE SOFTWARE.
 
 """
 
+import logging
+from collections import deque
+
 import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly, Timer, First, Event
-from cocotb.bus import Bus
-from cocotb.log import SimLog
 from cocotb.utils import get_sim_time
-
-from collections import deque
 
 from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE
@@ -95,17 +94,15 @@ class GmiiFrame(object):
 
 class GmiiSource(object):
 
-    _signals = ["d"]
-    _optional_signals = ["er", "en", "dv"]
-
-    def __init__(self, entity, name, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
-        self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
-        self.entity = entity
+    def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+        self.log = logging.getLogger(f"cocotb.{data._path}")
+        self.data = data
+        self.er = er
+        self.dv = dv
         self.clock = clock
         self.reset = reset
         self.enable = enable
         self.mii_select = mii_select
-        self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         self.log.info("GMII source")
         self.log.info("cocotbext-eth version %s", __version__)
@@ -127,18 +124,13 @@ class GmiiSource(object):
 
         self.reset = reset
 
-        assert len(self.bus.d) == 8
-        self.bus.d.setimmediatevalue(0)
-        if self.bus.er is not None:
-            assert len(self.bus.er) == 1
-            self.bus.er.setimmediatevalue(0)
-        if self.bus.en is not None:
-            assert len(self.bus.en) == 1
-            self.bus.en.setimmediatevalue(0)
-            self.bus.dv = self.bus.en
-        if self.bus.dv is not None:
-            assert len(self.bus.dv) == 1
-            self.bus.dv.setimmediatevalue(0)
+        assert len(self.data) == 8
+        self.data.setimmediatevalue(0)
+        if self.er is not None:
+            assert len(self.er) == 1
+            self.er.setimmediatevalue(0)
+        assert len(self.dv) == 1
+        self.dv.setimmediatevalue(0)
 
         cocotb.fork(self._run())
 
@@ -174,10 +166,10 @@ class GmiiSource(object):
                 frame = None
                 ifg_cnt = 0
                 self.active = False
-                self.bus.d <= 0
-                if self.bus.er is not None:
-                    self.bus.er <= 0
-                self.bus.en <= 0
+                self.data <= 0
+                if self.er is not None:
+                    self.er <= 0
+                self.dv <= 0
                 continue
 
             await RisingEdge(self.clock)
@@ -209,35 +201,33 @@ class GmiiSource(object):
                     self.active = True
 
                 if frame is not None:
-                    self.bus.d <= frame.data.pop(0)
-                    if self.bus.er is not None:
-                        self.bus.er <= frame.error.pop(0)
-                    self.bus.en <= 1
+                    self.data <= frame.data.pop(0)
+                    if self.er is not None:
+                        self.er <= frame.error.pop(0)
+                    self.dv <= 1
 
                     if not frame.data:
                         ifg_cnt = max(self.ifg, 1)
                         frame = None
                 else:
-                    self.bus.d <= 0
-                    if self.bus.er is not None:
-                        self.bus.er <= 0
-                    self.bus.en <= 0
+                    self.data <= 0
+                    if self.er is not None:
+                        self.er <= 0
+                    self.dv <= 0
                     self.active = False
 
 
 class GmiiSink(object):
 
-    _signals = ["d"]
-    _optional_signals = ["er", "en", "dv"]
-
-    def __init__(self, entity, name, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
-        self.log = SimLog("cocotb.%s.%s" % (entity._name, name))
-        self.entity = entity
+    def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+        self.log = logging.getLogger(f"cocotb.{data._path}")
+        self.data = data
+        self.er = er
+        self.dv = dv
         self.clock = clock
         self.reset = reset
         self.enable = enable
         self.mii_select = mii_select
-        self.bus = Bus(self.entity, name, self._signals, optional_signals=self._optional_signals, **kwargs)
 
         self.log.info("GMII sink")
         self.log.info("cocotbext-eth version %s", __version__)
@@ -258,14 +248,11 @@ class GmiiSink(object):
 
         self.reset = reset
 
-        assert len(self.bus.d) == 8
-        if self.bus.er is not None:
-            assert len(self.bus.er) == 1
-        if self.bus.en is not None:
-            assert len(self.bus.en) == 1
-            self.bus.dv = self.bus.en
-        if self.bus.dv is not None:
-            assert len(self.bus.dv) == 1
+        assert len(self.data) == 8
+        if self.er is not None:
+            assert len(self.er) == 1
+        if self.dv is not None:
+            assert len(self.dv) == 1
 
         cocotb.fork(self._run())
 
@@ -309,9 +296,9 @@ class GmiiSink(object):
                 continue
 
             if self.enable is None or self.enable.value:
-                d_val = self.bus.d.value.integer
-                dv_val = self.bus.dv.value.integer
-                er_val = 0 if self.bus.er is None else self.bus.er.value.integer
+                d_val = self.data.value.integer
+                dv_val = self.dv.value.integer
+                er_val = 0 if self.er is None else self.er.value.integer
 
                 if frame is None:
                     if dv_val:
