@@ -1,4 +1,4 @@
-"""
+/*
 
 Copyright (c) 2020 Alex Forencich
 
@@ -20,12 +20,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-"""
+*/
 
-from .version import __version__
+// Language: Verilog 2001
 
-from .gmii import GmiiFrame, GmiiSource, GmiiSink
-from .rgmii import RgmiiSource, RgmiiSink
-from .xgmii import XgmiiFrame, XgmiiSource, XgmiiSink
+`timescale 1ns / 1ps
 
-from .ptp import PtpClock
+/*
+ * PTP clock test
+ */
+module test_ptp_clock
+(
+    input  wire        clk,
+    input  wire        rst,
+
+    inout  wire [95:0] ts_96,
+    inout  wire [63:0] ts_64,
+    inout  wire        ts_step,
+    inout  wire        pps
+);
+
+endmodule
