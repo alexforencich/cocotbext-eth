@@ -52,11 +52,17 @@ class XgmiiFrame(object):
             self.ctrl = ctrl
 
     @classmethod
-    def from_payload(cls, payload, add_fcs=True):
+    def from_payload(cls, payload, min_len=60):
+        payload = bytearray(payload)
+        if len(payload) < min_len:
+            payload.extend(bytearray(min_len-len(payload)))
+        payload.extend(struct.pack('<L', zlib.crc32(payload)))
+        return cls.from_raw_payload(payload)
+
+    @classmethod
+    def from_raw_payload(cls, payload):
         data = bytearray(ETH_PREAMBLE)
         data.extend(payload)
-        if add_fcs:
-            data.extend(struct.pack('<L', zlib.crc32(payload)))
         return cls(data)
 
     def get_preamble_len(self):
