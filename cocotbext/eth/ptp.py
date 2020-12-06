@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 import logging
 import math
+from fractions import Fraction
 
 import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
@@ -90,6 +91,33 @@ class PtpClock(object):
             self.pps.setimmediatevalue(0)
 
         cocotb.fork(self._run())
+
+    def set_period(self, ns, fns):
+        self.period_ns = int(ns)
+        self.period_fns = int(fns) & 0xffff
+
+    def set_drift(self, ns, fns, rate):
+        self.drift_ns = int(ns)
+        self.drift_fns = int(fns) & 0xffff
+        self.drift_rate = int(rate)
+
+    def set_period_ns(self, t):
+        drift, period = math.modf(t*2**16)
+        period = int(period)
+        frac = Fraction(drift).limit_denominator(2**16)
+        drift = frac.numerator
+        rate = frac.denominator
+        self.period_ns = period >> 16
+        self.period_fns = period & 0xffff
+        self.drift_ns = drift >> 16
+        self.drift_fns = drift & 0xffff
+        self.drift_rate = rate
+
+    def get_period_ns(self):
+        p = ((self.period_ns << 16) | self.period_fns) / 2**16
+        if self.drift_rate:
+            return p + ((self.drift_ns << 16) | self.drift_fns) / self.drift_rate / 2**16
+        return p
 
     def set_ts_96(self, ts_s, ts_ns=None, ts_fns=None):
         ts_s = int(ts_s)
