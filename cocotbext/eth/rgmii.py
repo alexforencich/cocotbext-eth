@@ -301,7 +301,3 @@ class RgmiiSink(object):
             dv_val = self.ctrl.value.integer
 
             await RisingEdge(self.clock)
-
-
-class RgmiiMonitor(RgmiiSink):
-    pass

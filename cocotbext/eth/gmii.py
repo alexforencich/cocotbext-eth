@@ -365,7 +365,3 @@ class GmiiSink(object):
                     frame.error.append(er_val)
 
             await RisingEdge(self.clock)
-
-
-class GmiiMonitor(GmiiSink):
-    pass

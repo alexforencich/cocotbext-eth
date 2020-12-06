@@ -375,7 +375,3 @@ class XgmiiSink(object):
                             frame.ctrl.append(c_val)
 
             await RisingEdge(self.clock)
-
-
-class XgmiiMonitor(XgmiiSink):
-    pass
