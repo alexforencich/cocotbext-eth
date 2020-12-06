@@ -110,6 +110,7 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
         rx_frame = tb.sink.recv()
 
         assert rx_frame.get_payload() == test_data
+        assert rx_frame.check_fcs()
         assert rx_frame.error is None
 
     assert tb.sink.empty()
