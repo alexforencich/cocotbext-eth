@@ -42,11 +42,7 @@ class PtpClock(object):
             pps=None,
             clock=None,
             reset=None,
-            period_ns=0x6,
-            period_fns=0x6666,
-            drift_ns=0x0,
-            drift_fns=0x0002,
-            drift_rate=5,
+            period_ns=6.4,
             *args, **kwargs):
 
         self.log = logging.getLogger(f"cocotb.eth.{type(self).__name__}")
@@ -57,11 +53,12 @@ class PtpClock(object):
         self.clock = clock
         self.reset = reset
 
-        self.period_ns = period_ns
-        self.period_fns = period_fns
-        self.drift_ns = drift_ns
-        self.drift_fns = drift_fns
-        self.drift_rate = drift_rate
+        self.period_ns = 0
+        self.period_fns = 0
+        self.drift_ns = 0
+        self.drift_fns = 0
+        self.drift_rate = 0
+        self.set_period_ns(period_ns)
 
         self.log.info("PTP clock")
         self.log.info("cocotbext-eth version %s", __version__)

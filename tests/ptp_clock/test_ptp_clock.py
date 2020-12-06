@@ -52,11 +52,7 @@ class TB(object):
             pps=dut.pps,
             clock=dut.clk,
             reset=dut.rst,
-            period_ns=0x6,
-            period_fns=0x6666,
-            drift_ns=0x0,
-            drift_fns=0x0002,
-            drift_rate=5,
+            period_ns=6.4
         )
 
     async def reset(self):
