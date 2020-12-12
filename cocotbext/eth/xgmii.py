@@ -113,6 +113,9 @@ class XgmiiFrame(object):
     def __iter__(self):
         return self.data.__iter__()
 
+    def __bytes__(self):
+        return bytes(self.data)
+
 
 class XgmiiSource(object):
 
