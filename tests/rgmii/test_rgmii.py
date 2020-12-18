@@ -101,11 +101,10 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
 
     for test_data in test_frames:
         test_frame = GmiiFrame.from_payload(test_data)
-        tb.source.send(test_frame)
+        await tb.source.send(test_frame)
 
     for test_data in test_frames:
-        await tb.sink.wait()
-        rx_frame = tb.sink.recv()
+        rx_frame = await tb.sink.recv()
 
         assert rx_frame.get_payload() == test_data
         assert rx_frame.check_fcs()

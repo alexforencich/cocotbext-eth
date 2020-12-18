@@ -73,8 +73,10 @@ To receive data with a `GmiiSink`, call `recv()`.  Call `wait()` to wait for new
 
 #### Methods
 
-* `send(frame)`: send _frame_ (source)
-* `recv()`: receive a frame as a `GmiiFrame` (sink)
+* `send(frame)`: send _frame_ (blocking) (source)
+* `send_nowait(frame)`: send _frame_ (non-blocking) (source)
+* `recv()`: receive a frame as a `GmiiFrame` (blocking) (sink)
+* `recv_nowait()`: receive a frame as a `GmiiFrame` (non-blocking) (sink)
 * `count()`: returns the number of items in the queue (all)
 * `empty()`: returns _True_ if the queue is empty (all)
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
@@ -147,8 +149,10 @@ To receive data with an `RgmiiSink`, call `recv()`.  Call `wait()` to wait for n
 
 #### Methods
 
-* `send(frame)`: send _frame_ (source)
-* `recv()`: receive a frame as a `GmiiFrame` (sink)
+* `send(frame)`: send _frame_ (blocking) (source)
+* `send_nowait(frame)`: send _frame_ (non-blocking) (source)
+* `recv()`: receive a frame as a `GmiiFrame` (blocking) (sink)
+* `recv_nowait()`: receive a frame as a `GmiiFrame` (non-blocking) (sink)
 * `count()`: returns the number of items in the queue (all)
 * `empty()`: returns _True_ if the queue is empty (all)
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
@@ -198,8 +202,10 @@ To receive data with an `XgmiiSink`, call `recv()`.  Call `wait()` to wait for n
 
 #### Methods
 
-* `send(frame)`: send _frame_ (source)
-* `recv()`: receive a frame as an `XgmiiFrame` (sink)
+* `send(frame)`: send _frame_ (blocking) (source)
+* `send_nowait(frame)`: send _frame_ (non-blocking) (source)
+* `recv()`: receive a frame as an `XgmiiFrame` (blocking) (sink)
+* `recv_nowait()`: receive a frame as an `XgmiiFrame` (non-blocking) (sink)
 * `count()`: returns the number of items in the queue (all)
 * `empty()`: returns _True_ if the queue is empty (all)
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)

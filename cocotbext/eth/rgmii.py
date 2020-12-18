@@ -72,7 +72,10 @@ class RgmiiSource(object):
 
         cocotb.fork(self._run())
 
-    def send(self, frame):
+    async def send(self, frame):
+        self.send_nowait(frame)
+
+    def send_nowait(self, frame):
         frame = GmiiFrame(frame)
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
@@ -200,7 +203,13 @@ class RgmiiSink(object):
 
         cocotb.fork(self._run())
 
-    def recv(self):
+    async def recv(self, compact=True):
+        while self.empty():
+            self.sync.clear()
+            await self.sync.wait()
+        return self.recv_nowait(compact)
+
+    def recv_nowait(self, compact=True):
         if self.queue:
             frame = self.queue.popleft()
             self.queue_occupancy_bytes -= len(frame)
