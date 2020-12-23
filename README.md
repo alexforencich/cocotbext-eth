@@ -42,13 +42,11 @@ To use these modules, import the one you need and connect it to the DUT:
 
 To send data into a design with an `GmiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
 
-    gmii_source.send(GmiiFrame.from_payload(b'test data'))
-    await gmii_source.wait()
+    await gmii_source.send(GmiiFrame.from_payload(b'test data'))
 
-To receive data with a `GmiiSink`, call `recv()`.  Call `wait()` to wait for new receive data.
+To receive data with a `GmiiSink`, call `recv()`.
 
-    await gmii_sink.wait()
-    data = gmii_sink.recv()
+    data = await gmii_sink.recv()
 
 #### Signals
 
@@ -105,6 +103,59 @@ Methods:
 * `normalize()`: pack `error` to the same length as `data`, replicating last element if necessary, initialize to list of `0` if not specified.
 * `compact()`: remove `error` if all zero
 
+### MII
+
+The `MiiSource` and `MiiSink` classes can be used to drive, receive, and monitor MII traffic.  The `MiiSource` drives MII traffic into a design.  The `MiiSink` receives MII traffic, including monitoring internal interfaces.
+
+To use these modules, import the one you need and connect it to the DUT:
+
+    from cocotbext.eth import MiiSource, MiiSink
+
+    mii_source = MiiSource(dut.rxd, dut.rx_er, dut.rx_en, dut.clk, dut.rst)
+    mii_sink = MiiSink(dut.txd, dut.tx_er, dut.tx_en, dut.clk, dut.rst)
+
+All signals must be passed separately into these classes.
+
+To send data into a design with an `MiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
+
+    await mii_source.send(GmiiFrame.from_payload(b'test data'))
+
+To receive data with an `MiiSink`, call `recv()`.
+
+    data = await mii_sink.recv()
+
+#### Signals
+
+* `txd`, `rxd`: data
+* `tx_er`, `rx_er`: error (when asserted with `tx_en` or `rx_dv`)
+* `tx_en`, `rx_dv`: data valid
+
+#### Constructor parameters:
+
+* _data_: data signal (txd, rxd, etc.)
+* _er_: error signal (tx_er, rx_er, etc.) (optional)
+* _dv_: data valid signal (tx_en, rx_dv, etc.)
+* _clock_: clock signal
+* _reset_: reset signal (optional)
+* _enable_: clock enable (optional)
+
+#### Attributes:
+
+* _queue_occupancy_bytes_: number of bytes in queue
+* _queue_occupancy_frames_: number of frames in queue
+
+#### Methods
+
+* `send(frame)`: send _frame_ (blocking) (source)
+* `send_nowait(frame)`: send _frame_ (non-blocking) (source)
+* `recv()`: receive a frame as a `GmiiFrame` (blocking) (sink)
+* `recv_nowait()`: receive a frame as a `GmiiFrame` (non-blocking) (sink)
+* `count()`: returns the number of items in the queue (all)
+* `empty()`: returns _True_ if the queue is empty (all)
+* `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
+* `wait()`: wait for idle (source)
+* `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
+
 ### RGMII
 
 The `RgmiiSource` and `RgmiiSink` classes can be used to drive, receive, and monitor RGMII traffic.  The `RgmiiSource` drives RGMII traffic into a design.  The `RgmiiSink` receives RGMII traffic, including monitoring internal interfaces.
@@ -120,13 +171,11 @@ All signals must be passed separately into these classes.
 
 To send data into a design with an `RgmiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
 
-    rgmii_source.send(GmiiFrame.from_payload(b'test data'))
-    await rgmii_source.wait()
+    await rgmii_source.send(GmiiFrame.from_payload(b'test data'))
 
-To receive data with an `RgmiiSink`, call `recv()`.  Call `wait()` to wait for new receive data.
+To receive data with an `RgmiiSink`, call `recv()`.
 
-    await rgmii_sink.wait()
-    data = rgmii_sink.recv()
+    data = await rgmii_sink.recv()
 
 #### Signals
 
@@ -174,13 +223,11 @@ All signals must be passed separately into these classes.
 
 To send data into a design with an `XgmiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `XgmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
 
-    xgmii_source.send(XgmiiFrame.from_payload(b'test data'))
-    await xgmii_source.wait()
+    await xgmii_source.send(XgmiiFrame.from_payload(b'test data'))
 
-To receive data with an `XgmiiSink`, call `recv()`.  Call `wait()` to wait for new receive data.
+To receive data with an `XgmiiSink`, call `recv()`.
 
-    await xgmii_sink.wait()
-    data = xgmii_sink.recv()
+    data = await xgmii_sink.recv()
 
 #### Signals
 
