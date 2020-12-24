@@ -319,6 +319,8 @@ class RgmiiPhy:
         self.tx_clk = tx_clk
         self.rx_clk = rx_clk
 
+        super().__init__(*args, **kwargs)
+
         self.tx = RgmiiSink(txd, tx_ctl, tx_clk, reset)
         self.rx = RgmiiSource(rxd, rx_ctl, rx_clk, reset)
 

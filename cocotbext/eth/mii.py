@@ -293,6 +293,8 @@ class MiiPhy:
         self.tx_clk = tx_clk
         self.rx_clk = rx_clk
 
+        super().__init__(*args, **kwargs)
+
         self.tx = MiiSink(txd, tx_er, tx_en, tx_clk, reset)
         self.rx = MiiSource(rxd, rx_er, rx_dv, rx_clk, reset)
 
