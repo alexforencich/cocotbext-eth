@@ -28,7 +28,7 @@ import zlib
 from collections import deque
 
 import cocotb
-from cocotb.triggers import RisingEdge, ReadOnly, Timer, First, Event
+from cocotb.triggers import RisingEdge, Timer, First, Event
 from cocotb.utils import get_sim_time
 
 from .version import __version__
@@ -184,10 +184,9 @@ class GmiiSource(object):
         self.active = False
 
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 frame = None
                 ifg_cnt = 0
                 self.active = False
@@ -196,8 +195,6 @@ class GmiiSource(object):
                     self.er <= 0
                 self.dv <= 0
                 continue
-
-            await RisingEdge(self.clock)
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt > 0:
@@ -318,10 +315,9 @@ class GmiiSink(object):
         self.active = False
 
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 frame = None
                 self.active = False
                 continue
@@ -375,5 +371,3 @@ class GmiiSink(object):
                 if frame is not None:
                     frame.data.append(d_val)
                     frame.error.append(er_val)
-
-            await RisingEdge(self.clock)

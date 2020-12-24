@@ -26,7 +26,7 @@ import logging
 from collections import deque
 
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly, Timer, First, Event
+from cocotb.triggers import RisingEdge, FallingEdge, Timer, First, Event
 from cocotb.utils import get_sim_time
 
 from .version import __version__
@@ -103,18 +103,15 @@ class RgmiiSource(object):
         en = 0
 
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 frame = None
                 ifg_cnt = 0
                 self.active = False
                 self.data <= 0
                 self.ctrl <= 0
                 continue
-
-            await RisingEdge(self.clock)
 
             if self.mii_select is None or not self.mii_select.value:
                 # send high nibble after rising edge, leading in to falling edge
@@ -243,15 +240,20 @@ class RgmiiSink(object):
         er_val = 0
 
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
+
+            # capture low nibble on rising edge
+            d_val = self.data.value.integer
+            dv_val = self.ctrl.value.integer
+
+            await FallingEdge(self.clock)
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 frame = None
                 self.active = False
                 continue
 
-            # capture high nibble after rising edge, leading in to falling edge
+            # capture high nibble on falling edge
             d_val |= self.data.value.integer << 4
             er_val = dv_val ^ self.ctrl.value.integer
 
@@ -301,12 +303,3 @@ class RgmiiSink(object):
                 if frame is not None:
                     frame.data.append(d_val)
                     frame.error.append(er_val)
-
-            await FallingEdge(self.clock)
-            await ReadOnly()
-
-            # capture low nibble after falling edge, leading in to rising edge
-            d_val = self.data.value.integer
-            dv_val = self.ctrl.value.integer
-
-            await RisingEdge(self.clock)

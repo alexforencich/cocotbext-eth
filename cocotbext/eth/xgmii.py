@@ -28,7 +28,7 @@ import zlib
 from collections import deque
 
 import cocotb
-from cocotb.triggers import RisingEdge, ReadOnly, Timer, First, Event
+from cocotb.triggers import RisingEdge, Timer, First, Event
 from cocotb.utils import get_sim_time
 
 from .version import __version__
@@ -192,10 +192,9 @@ class XgmiiSource(object):
         self.active = False
 
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 frame = None
                 ifg_cnt = 0
                 deficit_idle_cnt = 0
@@ -203,8 +202,6 @@ class XgmiiSource(object):
                 self.data <= 0
                 self.ctrl <= 0
                 continue
-
-            await RisingEdge(self.clock)
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt + deficit_idle_cnt > self.byte_width-1 or (not self.enable_dic and ifg_cnt > 4):
@@ -345,10 +342,9 @@ class XgmiiSink(object):
         self.active = False
 
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 frame = None
                 self.active = False
                 continue
@@ -385,5 +381,3 @@ class XgmiiSink(object):
                         else:
                             frame.data.append(d_val)
                             frame.ctrl.append(c_val)
-
-            await RisingEdge(self.clock)

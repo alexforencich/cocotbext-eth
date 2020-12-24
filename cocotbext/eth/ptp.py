@@ -27,7 +27,7 @@ import math
 from fractions import Fraction
 
 import cocotb
-from cocotb.triggers import RisingEdge, ReadOnly
+from cocotb.triggers import RisingEdge
 
 from .version import __version__
 
@@ -178,10 +178,9 @@ class PtpClock(object):
 
     async def _run(self):
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 self.ts_96_s = 0
                 self.ts_96_ns = 0
                 self.ts_96_fns = 0
@@ -197,8 +196,6 @@ class PtpClock(object):
                 if self.pps is not None:
                     self.pps <= 0
                 continue
-
-            await RisingEdge(self.clock)
 
             if self.ts_step is not None:
                 self.ts_step <= self.ts_updated

@@ -117,6 +117,7 @@ async def run_load_timestamps(dut):
     tb.ptp_clock.set_ts_64(12345678)
 
     await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
     assert dut.ts_96.value.integer == 12345678+((tb.ptp_clock.period_ns << 16) + tb.ptp_clock.period_fns)
     assert dut.ts_64.value.integer == 12345678+((tb.ptp_clock.period_ns << 16) + tb.ptp_clock.period_fns)
@@ -164,6 +165,8 @@ async def run_seconds_increment(dut):
     tb.ptp_clock.set_ts_64(999990000*2**16)
 
     await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
     start_time = get_sim_time('sec')
     start_ts_96 = (dut.ts_96.value.integer >> 48) + ((dut.ts_96.value.integer & 0xffffffffffff)/2**16*1e-9)
     start_ts_64 = dut.ts_64.value.integer/2**16*1e-9
