@@ -56,6 +56,7 @@ class RgmiiSource(object):
         self.queue = deque()
 
         self.ifg = 12
+        self.mii_mode = False
 
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
@@ -113,7 +114,7 @@ class RgmiiSource(object):
                 self.ctrl <= 0
                 continue
 
-            if self.mii_select is None or not self.mii_select.value:
+            if not self.mii_mode:
                 # send high nibble after rising edge, leading in to falling edge
                 self.data <= d >> 4
                 self.ctrl <= en ^ er
@@ -131,7 +132,10 @@ class RgmiiSource(object):
                     self.log.info("TX frame: %s", frame)
                     frame.normalize()
 
-                    if self.mii_select is not None and self.mii_select.value:
+                    if self.mii_select is not None:
+                        self.mii_mode = bool(self.mii_select.value.integer)
+
+                    if self.mii_mode:
                         mii_data = []
                         mii_error = []
                         for b, e in zip(frame.data, frame.error):
@@ -186,6 +190,8 @@ class RgmiiSink(object):
         self.active = False
         self.queue = deque()
         self.sync = Event()
+
+        self.mii_mode = False
 
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
@@ -268,7 +274,10 @@ class RgmiiSink(object):
                     if not dv_val:
                         # end of frame
 
-                        if self.mii_select is not None and self.mii_select.value:
+                        if self.mii_select is not None:
+                            self.mii_mode = bool(self.mii_select.value.integer)
+
+                        if self.mii_mode:
                             odd = True
                             sync = False
                             b = 0
