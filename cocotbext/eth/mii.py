@@ -27,7 +27,7 @@ from collections import deque
 
 import cocotb
 from cocotb.triggers import RisingEdge, Timer, First, Event
-from cocotb.utils import get_sim_time
+from cocotb.utils import get_sim_time, get_sim_steps
 
 from .version import __version__
 from .gmii import GmiiFrame
@@ -286,3 +286,41 @@ class MiiSink(object):
                 if frame is not None:
                     frame.data.append(d_val)
                     frame.error.append(er_val)
+
+
+class MiiPhy:
+    def __init__(self, txd, tx_er, tx_en, tx_clk, rxd, rx_er, rx_dv, rx_clk, reset=None, speed=100e6, *args, **kwargs):
+        self.tx_clk = tx_clk
+        self.rx_clk = rx_clk
+
+        self.tx = MiiSink(txd, tx_er, tx_en, tx_clk, reset)
+        self.rx = MiiSource(rxd, rx_er, rx_dv, rx_clk, reset)
+
+        self.tx_clk.setimmediatevalue(0)
+        self.rx_clk.setimmediatevalue(0)
+
+        self._clock_cr = None
+        self.set_speed(speed)
+
+    def set_speed(self, speed):
+        if speed in (10e6, 100e6):
+            self.speed = speed
+        else:
+            raise ValueError("Invalid speed selection")
+
+        if self._clock_cr is not None:
+            self._clock_cr.kill()
+
+        self._clock_cr = cocotb.fork(self._run_clocks(4*1e9/self.speed))
+
+    async def _run_clocks(self, period):
+        half_period = get_sim_steps(period / 2.0, 'ns')
+        t = Timer(half_period)
+
+        while True:
+            await t
+            self.tx_clk <= 1
+            self.rx_clk <= 1
+            await t
+            self.tx_clk <= 0
+            self.rx_clk <= 0
