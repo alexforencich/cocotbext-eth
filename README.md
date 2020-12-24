@@ -40,11 +40,13 @@ To use these modules, import the one you need and connect it to the DUT:
     gmii_source = GmiiSource(dut.rxd, dut.rx_er, dut.rx_en, dut.clk, dut.rst)
     gmii_sink = GmiiSink(dut.txd, dut.tx_er, dut.tx_en, dut.clk, dut.rst)
 
-To send data into a design with an `GmiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
+To send data into a design with an `GmiiSource`, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
 
     await gmii_source.send(GmiiFrame.from_payload(b'test data'))
+    # wait for operation to complete (optional)
+    await gmii_source.wait()
 
-To receive data with a `GmiiSink`, call `recv()`.
+To receive data with a `GmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await gmii_sink.recv()
 
@@ -116,11 +118,13 @@ To use these modules, import the one you need and connect it to the DUT:
 
 All signals must be passed separately into these classes.
 
-To send data into a design with an `MiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
+To send data into a design with an `MiiSource`, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
 
     await mii_source.send(GmiiFrame.from_payload(b'test data'))
+    # wait for operation to complete (optional)
+    await mii_source.wait()
 
-To receive data with an `MiiSink`, call `recv()`.
+To receive data with an `MiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await mii_sink.recv()
 
@@ -169,11 +173,13 @@ To use these modules, import the one you need and connect it to the DUT:
 
 All signals must be passed separately into these classes.
 
-To send data into a design with an `RgmiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
+To send data into a design with an `RgmiiSource`, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
 
     await rgmii_source.send(GmiiFrame.from_payload(b'test data'))
+    # wait for operation to complete (optional)
+    await rgmii_source.wait()
 
-To receive data with an `RgmiiSink`, call `recv()`.
+To receive data with an `RgmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await rgmii_sink.recv()
 
@@ -221,11 +227,13 @@ To use these modules, import the one you need and connect it to the DUT:
 
 All signals must be passed separately into these classes.
 
-To send data into a design with an `XgmiiSource`, call `send()`.  Accepted data types are iterables that can be converted to bytearray or `XgmiiFrame` objects.  Call `wait()` to wait for the transmit operation to complete.  Example:
+To send data into a design with an `XgmiiSource`, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `XgmiiFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
 
     await xgmii_source.send(XgmiiFrame.from_payload(b'test data'))
+    # wait for operation to complete (optional)
+    await xgmii_source.wait()
 
-To receive data with an `XgmiiSink`, call `recv()`.
+To receive data with an `XgmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await xgmii_sink.recv()
 
