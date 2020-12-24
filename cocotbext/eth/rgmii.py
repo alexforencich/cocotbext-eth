@@ -34,7 +34,7 @@ from .gmii import GmiiFrame
 from .constants import EthPre
 
 
-class RgmiiSource(object):
+class RgmiiSource:
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -169,7 +169,7 @@ class RgmiiSource(object):
             self.ctrl <= en
 
 
-class RgmiiSink(object):
+class RgmiiSink:
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")

@@ -36,7 +36,7 @@ from cocotb.utils import get_sim_time
 from cocotbext.eth import PtpClock
 
 
-class TB(object):
+class TB:
     def __init__(self, dut):
         self.dut = dut
 

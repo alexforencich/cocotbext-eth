@@ -37,7 +37,7 @@ from cocotb.regression import TestFactory
 from cocotbext.eth import GmiiFrame, GmiiSource, GmiiSink
 
 
-class TB(object):
+class TB:
     def __init__(self, dut):
         self.dut = dut
 

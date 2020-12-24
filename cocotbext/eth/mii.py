@@ -34,7 +34,7 @@ from .gmii import GmiiFrame
 from .constants import EthPre
 
 
-class MiiSource(object):
+class MiiSource:
 
     def __init__(self, data, er, dv, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -157,7 +157,7 @@ class MiiSource(object):
                     self.active = False
 
 
-class MiiSink(object):
+class MiiSink:
 
     def __init__(self, data, er, dv, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")

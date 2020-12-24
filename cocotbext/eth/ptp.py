@@ -32,7 +32,7 @@ from cocotb.triggers import RisingEdge
 from .version import __version__
 
 
-class PtpClock(object):
+class PtpClock:
 
     def __init__(
             self,

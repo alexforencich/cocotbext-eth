@@ -35,7 +35,7 @@ from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE, XgmiiCtrl
 
 
-class XgmiiFrame(object):
+class XgmiiFrame:
     def __init__(self, data=None, ctrl=None):
         self.data = bytearray()
         self.ctrl = None
@@ -117,7 +117,7 @@ class XgmiiFrame(object):
         return bytes(self.data)
 
 
-class XgmiiSource(object):
+class XgmiiSource:
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -272,7 +272,7 @@ class XgmiiSource(object):
                     self.active = False
 
 
-class XgmiiSink(object):
+class XgmiiSink:
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")

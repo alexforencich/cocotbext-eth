@@ -35,7 +35,7 @@ from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE
 
 
-class GmiiFrame(object):
+class GmiiFrame:
     def __init__(self, data=None, error=None):
         self.data = bytearray()
         self.error = None
@@ -114,7 +114,7 @@ class GmiiFrame(object):
         return bytes(self.data)
 
 
-class GmiiSource(object):
+class GmiiSource:
 
     def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -243,7 +243,7 @@ class GmiiSource(object):
                     self.active = False
 
 
-class GmiiSink(object):
+class GmiiSink:
 
     def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
