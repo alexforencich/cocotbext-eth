@@ -29,7 +29,7 @@ from collections import deque
 
 import cocotb
 from cocotb.triggers import RisingEdge, Timer, First, Event
-from cocotb.utils import get_sim_time
+from cocotb.utils import get_sim_time, get_sim_steps
 
 from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE
@@ -396,3 +396,57 @@ class GmiiSink(Reset):
                 if frame is not None:
                     frame.data.append(d_val)
                     frame.error.append(er_val)
+
+
+class GmiiPhy:
+    def __init__(self, txd, tx_er, tx_en, tx_clk, gtx_clk, rxd, rx_er, rx_dv, rx_clk,
+            reset=None, speed=1000e6, *args, **kwargs):
+
+        self.gtx_clk = gtx_clk
+        self.tx_clk = tx_clk
+        self.rx_clk = rx_clk
+
+        super().__init__(*args, **kwargs)
+
+        self.tx = GmiiSink(txd, tx_er, tx_en, tx_clk, reset)
+        self.rx = GmiiSource(rxd, rx_er, rx_dv, rx_clk, reset)
+
+        self.rx_clk.setimmediatevalue(0)
+
+        self._clock_cr = None
+        self.set_speed(speed)
+
+    def set_speed(self, speed):
+        if speed in (10e6, 100e6, 1000e6):
+            self.speed = speed
+        else:
+            raise ValueError("Invalid speed selection")
+
+        if self._clock_cr is not None:
+            self._clock_cr.kill()
+
+        if self.speed == 1000e6:
+            self._clock_cr = cocotb.fork(self._run_clocks(8*1e9/self.speed))
+            self.tx.mii_mode = False
+            self.rx.mii_mode = False
+            self.tx.clock = self.gtx_clk
+        else:
+            self._clock_cr = cocotb.fork(self._run_clocks(4*1e9/self.speed))
+            self.tx.mii_mode = True
+            self.rx.mii_mode = True
+            self.tx.clock = self.tx_clk
+
+        self.tx.assert_reset()
+        self.rx.assert_reset()
+
+    async def _run_clocks(self, period):
+        half_period = get_sim_steps(period / 2.0, 'ns')
+        t = Timer(half_period)
+
+        while True:
+            await t
+            self.rx_clk <= 1
+            self.tx_clk <= 1
+            await t
+            self.rx_clk <= 0
+            self.tx_clk <= 0
