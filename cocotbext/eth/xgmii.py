@@ -102,10 +102,10 @@ class XgmiiFrame:
 
     def __repr__(self):
         return (
-            f"{type(self).__name__}(data={repr(self.data)}, "
-            f"ctrl={repr(self.ctrl)}, "
-            f"rx_sim_time={repr(self.rx_sim_time)}, "
-            f"rx_start_lane={repr(self.rx_start_lane)})"
+            f"{type(self).__name__}(data={self.data!r}, "
+            f"ctrl={self.ctrl!r}, "
+            f"rx_sim_time={self.rx_sim_time!r}, "
+            f"rx_start_lane={self.rx_start_lane!r})"
         )
 
     def __len__(self):

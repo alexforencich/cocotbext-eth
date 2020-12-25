@@ -100,9 +100,9 @@ class GmiiFrame:
 
     def __repr__(self):
         return (
-            f"{type(self).__name__}(data={repr(self.data)}, "
-            f"error={repr(self.error)}, "
-            f"rx_sim_time={repr(self.rx_sim_time)})"
+            f"{type(self).__name__}(data={self.data!r}, "
+            f"error={self.error!r}, "
+            f"rx_sim_time={self.rx_sim_time!r})"
         )
 
     def __len__(self):
