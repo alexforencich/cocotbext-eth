@@ -30,9 +30,10 @@ import cocotb
 from cocotb.triggers import RisingEdge
 
 from .version import __version__
+from .reset import Reset
 
 
-class PtpClock:
+class PtpClock(Reset):
 
     def __init__(
             self,
@@ -87,7 +88,9 @@ class PtpClock:
         if self.pps is not None:
             self.pps.setimmediatevalue(0)
 
-        cocotb.fork(self._run())
+        self._run_cr = None
+
+        self._init_reset(reset)
 
     def set_period(self, ns, fns):
         self.period_ns = int(ns)
@@ -176,26 +179,35 @@ class PtpClock:
     def get_ts_64_s(self):
         return self.get_ts_64()*1e-9
 
+    def _handle_reset(self, state):
+        if state:
+            self.log.info("Reset asserted")
+            if self._run_cr is not None:
+                self._run_cr.kill()
+                self._run_cr = None
+        else:
+            self.log.info("Reset de-asserted")
+            if self._run_cr is None:
+                self._run_cr = cocotb.fork(self._run())
+
+        self.ts_96_s = 0
+        self.ts_96_ns = 0
+        self.ts_96_fns = 0
+        self.ts_64_ns = 0
+        self.ts_64_fns = 0
+        self.drift_cnt = 0
+        if self.ts_96 is not None:
+            self.ts_96 <= 0
+        if self.ts_64 is not None:
+            self.ts_64 <= 0
+        if self.ts_step is not None:
+            self.ts_step <= 0
+        if self.pps is not None:
+            self.pps <= 0
+
     async def _run(self):
         while True:
             await RisingEdge(self.clock)
-
-            if self.reset is not None and self.reset.value:
-                self.ts_96_s = 0
-                self.ts_96_ns = 0
-                self.ts_96_fns = 0
-                self.ts_64_ns = 0
-                self.ts_64_fns = 0
-                self.drift_cnt = 0
-                if self.ts_96 is not None:
-                    self.ts_96 <= 0
-                if self.ts_64 is not None:
-                    self.ts_64 <= 0
-                if self.ts_step is not None:
-                    self.ts_step <= 0
-                if self.pps is not None:
-                    self.pps <= 0
-                continue
 
             if self.ts_step is not None:
                 self.ts_step <= self.ts_updated

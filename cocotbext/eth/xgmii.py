@@ -33,6 +33,7 @@ from cocotb.utils import get_sim_time
 
 from .version import __version__
 from .constants import EthPre, ETH_PREAMBLE, XgmiiCtrl
+from .reset import Reset
 
 
 class XgmiiFrame:
@@ -117,7 +118,7 @@ class XgmiiFrame:
         return bytes(self.data)
 
 
-class XgmiiSource:
+class XgmiiSource(Reset):
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -147,8 +148,6 @@ class XgmiiSource:
         self.width = len(self.data)
         self.byte_width = len(self.ctrl)
 
-        self.reset = reset
-
         assert self.width == self.byte_width * 8
 
         self.idle_d = 0
@@ -161,7 +160,9 @@ class XgmiiSource:
         self.data.setimmediatevalue(0)
         self.ctrl.setimmediatevalue(0)
 
-        cocotb.fork(self._run())
+        self._run_cr = None
+
+        self._init_reset(reset)
 
     async def send(self, frame):
         self.send_nowait(frame)
@@ -185,6 +186,21 @@ class XgmiiSource:
         while not self.idle():
             await RisingEdge(self.clock)
 
+    def _handle_reset(self, state):
+        if state:
+            self.log.info("Reset asserted")
+            if self._run_cr is not None:
+                self._run_cr.kill()
+                self._run_cr = None
+        else:
+            self.log.info("Reset de-asserted")
+            if self._run_cr is None:
+                self._run_cr = cocotb.fork(self._run())
+
+        self.active = False
+        self.data <= 0
+        self.ctrl <= 0
+
     async def _run(self):
         frame = None
         ifg_cnt = 0
@@ -193,15 +209,6 @@ class XgmiiSource:
 
         while True:
             await RisingEdge(self.clock)
-
-            if self.reset is not None and self.reset.value:
-                frame = None
-                ifg_cnt = 0
-                deficit_idle_cnt = 0
-                self.active = False
-                self.data <= 0
-                self.ctrl <= 0
-                continue
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt + deficit_idle_cnt > self.byte_width-1 or (not self.enable_dic and ifg_cnt > 4):
@@ -272,7 +279,7 @@ class XgmiiSource:
                     self.active = False
 
 
-class XgmiiSink:
+class XgmiiSink(Reset):
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -299,11 +306,11 @@ class XgmiiSink:
         self.width = len(self.data)
         self.byte_width = len(self.ctrl)
 
-        self.reset = reset
-
         assert self.width == self.byte_width * 8
 
-        cocotb.fork(self._run())
+        self._run_cr = None
+
+        self._init_reset(reset)
 
     async def recv(self, compact=True):
         while self.empty():
@@ -337,17 +344,25 @@ class XgmiiSink:
         else:
             await self.sync.wait()
 
+    def _handle_reset(self, state):
+        if state:
+            self.log.info("Reset asserted")
+            if self._run_cr is not None:
+                self._run_cr.kill()
+                self._run_cr = None
+        else:
+            self.log.info("Reset de-asserted")
+            if self._run_cr is None:
+                self._run_cr = cocotb.fork(self._run())
+
+        self.active = False
+
     async def _run(self):
         frame = None
         self.active = False
 
         while True:
             await RisingEdge(self.clock)
-
-            if self.reset is not None and self.reset.value:
-                frame = None
-                self.active = False
-                continue
 
             if self.enable is None or self.enable.value:
                 for offset in range(self.byte_width):

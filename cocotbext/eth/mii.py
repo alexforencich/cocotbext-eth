@@ -32,9 +32,10 @@ from cocotb.utils import get_sim_time, get_sim_steps
 from .version import __version__
 from .gmii import GmiiFrame
 from .constants import EthPre
+from .reset import Reset
 
 
-class MiiSource:
+class MiiSource(Reset):
 
     def __init__(self, data, er, dv, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -63,8 +64,6 @@ class MiiSource:
         self.width = 4
         self.byte_width = 1
 
-        self.reset = reset
-
         assert len(self.data) == 4
         self.data.setimmediatevalue(0)
         if self.er is not None:
@@ -73,7 +72,9 @@ class MiiSource:
         assert len(self.dv) == 1
         self.dv.setimmediatevalue(0)
 
-        cocotb.fork(self._run())
+        self._run_cr = None
+
+        self._init_reset(reset)
 
     async def send(self, frame):
         self.send_nowait(frame)
@@ -97,6 +98,23 @@ class MiiSource:
         while not self.idle():
             await RisingEdge(self.clock)
 
+    def _handle_reset(self, state):
+        if state:
+            self.log.info("Reset asserted")
+            if self._run_cr is not None:
+                self._run_cr.kill()
+                self._run_cr = None
+        else:
+            self.log.info("Reset de-asserted")
+            if self._run_cr is None:
+                self._run_cr = cocotb.fork(self._run())
+
+        self.active = False
+        self.data <= 0
+        if self.er is not None:
+            self.er <= 0
+        self.dv <= 0
+
     async def _run(self):
         frame = None
         ifg_cnt = 0
@@ -104,16 +122,6 @@ class MiiSource:
 
         while True:
             await RisingEdge(self.clock)
-
-            if self.reset is not None and self.reset.value:
-                frame = None
-                ifg_cnt = 0
-                self.active = False
-                self.data <= 0
-                if self.er is not None:
-                    self.er <= 0
-                self.dv <= 0
-                continue
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt > 0:
@@ -157,7 +165,7 @@ class MiiSource:
                     self.active = False
 
 
-class MiiSink:
+class MiiSink(Reset):
 
     def __init__(self, data, er, dv, clock, reset=None, enable=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -185,15 +193,15 @@ class MiiSink:
         self.width = 4
         self.byte_width = 1
 
-        self.reset = reset
-
         assert len(self.data) == 4
         if self.er is not None:
             assert len(self.er) == 1
         if self.dv is not None:
             assert len(self.dv) == 1
 
-        cocotb.fork(self._run())
+        self._run_cr = None
+
+        self._init_reset(reset)
 
     async def recv(self, compact=True):
         while self.empty():
@@ -227,17 +235,25 @@ class MiiSink:
         else:
             await self.sync.wait()
 
+    def _handle_reset(self, state):
+        if state:
+            self.log.info("Reset asserted")
+            if self._run_cr is not None:
+                self._run_cr.kill()
+                self._run_cr = None
+        else:
+            self.log.info("Reset de-asserted")
+            if self._run_cr is None:
+                self._run_cr = cocotb.fork(self._run())
+
+        self.active = False
+
     async def _run(self):
         frame = None
         self.active = False
 
         while True:
             await RisingEdge(self.clock)
-
-            if self.reset is not None and self.reset.value:
-                frame = None
-                self.active = False
-                continue
 
             if self.enable is None or self.enable.value:
                 d_val = self.data.value.integer

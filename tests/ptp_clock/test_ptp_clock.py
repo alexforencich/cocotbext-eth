@@ -117,7 +117,6 @@ async def run_load_timestamps(dut):
     tb.ptp_clock.set_ts_64(12345678)
 
     await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
 
     assert dut.ts_96.value.integer == 12345678+((tb.ptp_clock.period_ns << 16) + tb.ptp_clock.period_fns)
     assert dut.ts_64.value.integer == 12345678+((tb.ptp_clock.period_ns << 16) + tb.ptp_clock.period_fns)

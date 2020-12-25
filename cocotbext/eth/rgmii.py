@@ -32,9 +32,10 @@ from cocotb.utils import get_sim_time, get_sim_steps
 from .version import __version__
 from .gmii import GmiiFrame
 from .constants import EthPre
+from .reset import Reset
 
 
-class RgmiiSource:
+class RgmiiSource(Reset):
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -64,14 +65,14 @@ class RgmiiSource:
         self.width = 8
         self.byte_width = 1
 
-        self.reset = reset
-
         assert len(self.data) == 4
         self.data.setimmediatevalue(0)
         assert len(self.ctrl) == 1
         self.ctrl.setimmediatevalue(0)
 
-        cocotb.fork(self._run())
+        self._run_cr = None
+
+        self._init_reset(reset)
 
     async def send(self, frame):
         self.send_nowait(frame)
@@ -95,6 +96,21 @@ class RgmiiSource:
         while not self.idle():
             await RisingEdge(self.clock)
 
+    def _handle_reset(self, state):
+        if state:
+            self.log.info("Reset asserted")
+            if self._run_cr is not None:
+                self._run_cr.kill()
+                self._run_cr = None
+        else:
+            self.log.info("Reset de-asserted")
+            if self._run_cr is None:
+                self._run_cr = cocotb.fork(self._run())
+
+        self.active = False
+        self.data <= 0
+        self.ctrl <= 0
+
     async def _run(self):
         frame = None
         ifg_cnt = 0
@@ -105,14 +121,6 @@ class RgmiiSource:
 
         while True:
             await RisingEdge(self.clock)
-
-            if self.reset is not None and self.reset.value:
-                frame = None
-                ifg_cnt = 0
-                self.active = False
-                self.data <= 0
-                self.ctrl <= 0
-                continue
 
             if not self.mii_mode:
                 # send high nibble after rising edge, leading in to falling edge
@@ -169,7 +177,7 @@ class RgmiiSource:
             self.ctrl <= en
 
 
-class RgmiiSink:
+class RgmiiSink(Reset):
 
     def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
@@ -199,12 +207,12 @@ class RgmiiSink:
         self.width = 8
         self.byte_width = 1
 
-        self.reset = reset
-
         assert len(self.data) == 4
         assert len(self.ctrl) == 1
 
-        cocotb.fork(self._run())
+        self._run_cr = None
+
+        self._init_reset(reset)
 
     async def recv(self, compact=True):
         while self.empty():
@@ -238,6 +246,19 @@ class RgmiiSink:
         else:
             await self.sync.wait()
 
+    def _handle_reset(self, state):
+        if state:
+            self.log.info("Reset asserted")
+            if self._run_cr is not None:
+                self._run_cr.kill()
+                self._run_cr = None
+        else:
+            self.log.info("Reset de-asserted")
+            if self._run_cr is None:
+                self._run_cr = cocotb.fork(self._run())
+
+        self.active = False
+
     async def _run(self):
         frame = None
         self.active = False
@@ -253,11 +274,6 @@ class RgmiiSink:
             dv_val = self.ctrl.value.integer
 
             await FallingEdge(self.clock)
-
-            if self.reset is not None and self.reset.value:
-                frame = None
-                self.active = False
-                continue
 
             # capture high nibble on falling edge
             d_val |= self.data.value.integer << 4
