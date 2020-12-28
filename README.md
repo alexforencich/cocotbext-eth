@@ -31,7 +31,7 @@ See the `tests` directory and [verilog-ethernet](https://github.com/alexforencic
 
 ### GMII
 
-The `GmiiSource` and `GmiiSink` classes can be used to drive, receive, and monitor GMII traffic.  The `GmiiSource` drives GMII traffic into a design.  The `GmiiSink` receives GMII traffic, including monitoring internal interfaces.
+The `GmiiSource` and `GmiiSink` classes can be used to drive, receive, and monitor GMII traffic.  The `GmiiSource` drives GMII traffic into a design.  The `GmiiSink` receives GMII traffic, including monitoring internal interfaces.  The `GmiiPhy` class is a wrapper around `GmiiSource` and `GmiiSink` that also provides clocking and rate-switching to emulate a GMII PHY chip.
 
 To use these modules, import the one you need and connect it to the DUT:
 
@@ -40,7 +40,7 @@ To use these modules, import the one you need and connect it to the DUT:
     gmii_source = GmiiSource(dut.rxd, dut.rx_er, dut.rx_en, dut.clk, dut.rst)
     gmii_sink = GmiiSink(dut.txd, dut.tx_er, dut.tx_en, dut.clk, dut.rst)
 
-To send data into a design with an `GmiiSource`, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
+To send data into a design with a `GmiiSource`, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
 
     await gmii_source.send(GmiiFrame.from_payload(b'test data'))
     # wait for operation to complete (optional)
@@ -49,6 +49,18 @@ To send data into a design with an `GmiiSource`, call `send()` or `send_nowait()
 To receive data with a `GmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await gmii_sink.recv()
+
+The `GmiiPhy` class provides a model of a GMII PHY chip.  It wraps instances of `GmiiSource` (`rx`) and `GmiiSink` (`tx`), provides the necessary clocking components, and provides the `set_speed()` method to change the link speed.  `set_speed()` changes the `tx_clk` and `rx_clk` frequencies, switches between `gtx_clk` and `tx_clk`, and selects the appropriate mode (MII or GMII) on the source and sink instances.  In general, the `GmiiPhy` class is intended to be used for integration tests where the design expects to be directly connected to an external GMII PHY chip and contains all of the necessary IO and clocking logic.  Example:
+
+    from cocotbext.eth import GmiiFrame, GmiiPhy
+
+    gmii_phy = GmiiPhy(dut.txd, dut.tx_er, dut.tx_en, dut.tx_clk, dut.gtx_clk,
+        dut.rxd, dut.rx_er, dut.rx_en, dut.rx_clk, dut.rst, speed=1000e6)
+
+    gmii_phy.set_speed(100e6)
+
+    await gmii_phy.rx.send(GmiiFrame.from_payload(b'test RX data'))
+    tx_data = await gmii_phy.tx.recv()
 
 #### Signals
 
@@ -70,6 +82,7 @@ To receive data with a `GmiiSink`, call `recv()` or `recv_nowait()`.  Optionally
 
 * _queue_occupancy_bytes_: number of bytes in queue
 * _queue_occupancy_frames_: number of frames in queue
+* _mii_mode_: control MII mode when _mii_select_ signal is not connected
 
 #### Methods
 
@@ -82,6 +95,20 @@ To receive data with a `GmiiSink`, call `recv()` or `recv_nowait()`.  Optionally
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
+
+#### GMII timing diagram
+
+Example transfer via GMII at 1 Gbps:
+
+                  __    __    __    __    _       __    __    __    __
+    tx_clk     __/  \__/  \__/  \__/  \__/  ... _/  \__/  \__/  \__/  \__
+                        _____ _____ _____ _     _ _____ _____
+    tx_d[7:0]  XXXXXXXXX_55__X_55__X_55__X_ ... _X_72__X_fb__XXXXXXXXXXXX
+
+    tx_er      ____________________________ ... _________________________
+                        ___________________     _____________
+    tx_en      ________/                    ...              \___________
+
 
 #### GmiiFrame object
 
@@ -107,7 +134,7 @@ Methods:
 
 ### MII
 
-The `MiiSource` and `MiiSink` classes can be used to drive, receive, and monitor MII traffic.  The `MiiSource` drives MII traffic into a design.  The `MiiSink` receives MII traffic, including monitoring internal interfaces.
+The `MiiSource` and `MiiSink` classes can be used to drive, receive, and monitor MII traffic.  The `MiiSource` drives MII traffic into a design.  The `MiiSink` receives MII traffic, including monitoring internal interfaces.  The `MiiPhy` class is a wrapper around `MiiSource` and `MiiSink` that also provides clocking and rate-switching to emulate an MII PHY chip.
 
 To use these modules, import the one you need and connect it to the DUT:
 
@@ -127,6 +154,18 @@ To send data into a design with an `MiiSource`, call `send()` or `send_nowait()`
 To receive data with an `MiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await mii_sink.recv()
+
+The `MiiPhy` class provides a model of an MII PHY chip.  It wraps instances of `MiiSource` (`rx`) and `MiiSink` (`tx`), provides the necessary clocking components, and provides the `set_speed()` method to change the link speed.  `set_speed()` changes the `tx_clk` and `rx_clk` frequencies.  In general, the `MiiPhy` class is intended to be used for integration tests where the design expects to be directly connected to an external MII PHY chip and contains all of the necessary IO and clocking logic.  Example:
+
+    from cocotbext.eth import GmiiFrame, MiiPhy
+
+    mii_phy = MiiPhy(dut.txd, dut.tx_er, dut.tx_en, dut.tx_clk,
+        dut.rxd, dut.rx_er, dut.rx_en, dut.rx_clk, dut.rst, speed=100e6)
+
+    mii_phy.set_speed(10e6)
+
+    await mii_phy.rx.send(GmiiFrame.from_payload(b'test RX data'))
+    tx_data = await mii_phy.tx.recv()
 
 #### Signals
 
@@ -160,9 +199,23 @@ To receive data with an `MiiSink`, call `recv()` or `recv_nowait()`.  Optionally
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
 
+#### MII timing diagram
+
+Example transfer via MII at 100 Mbps:
+
+                 _   _   _   _   _   _       _   _   _   _
+    tx_clk     _/ \_/ \_/ \_/ \_/ \_/  ... _/ \_/ \_/ \_/ \_
+                     ___ ___ ___ ___ _     _ ___ ___
+    tx_d[3:0]  XXXXXX_5_X_5_X_5_X_5_X_ ... _X_f_X_b_XXXXXXXX
+
+    tx_er      _______________________ ... _________________
+                     _________________     _________
+    tx_en      _____/                  ...          \_______
+
+
 ### RGMII
 
-The `RgmiiSource` and `RgmiiSink` classes can be used to drive, receive, and monitor RGMII traffic.  The `RgmiiSource` drives RGMII traffic into a design.  The `RgmiiSink` receives RGMII traffic, including monitoring internal interfaces.
+The `RgmiiSource` and `RgmiiSink` classes can be used to drive, receive, and monitor RGMII traffic.  The `RgmiiSource` drives RGMII traffic into a design.  The `RgmiiSink` receives RGMII traffic, including monitoring internal interfaces.  The `RgmiiPhy` class is a wrapper around `RgmiiSource` and `RgmiiSink` that also provides clocking and rate-switching to emulate an RGMII PHY chip.
 
 To use these modules, import the one you need and connect it to the DUT:
 
@@ -183,6 +236,18 @@ To receive data with an `RgmiiSink`, call `recv()` or `recv_nowait()`.  Optional
 
     data = await rgmii_sink.recv()
 
+The `RgmiiPhy` class provides a model of an RGMII PHY chip.  It wraps instances of `RgmiiSource` (`rx`) and `RgmiiSink` (`tx`), provides the necessary clocking components, and provides the `set_speed()` method to change the link speed.  `set_speed()` changes the `rx_clk` frequency and selects the appropriate mode (SDR or DDR) on the source and sink instances.  In general, the `RgmiiPhy` class is intended to be used for integration tests where the design expects to be directly connected to an external RGMII PHY chip and contains all of the necessary IO and clocking logic.  Example:
+
+    from cocotbext.eth import GmiiFrame, RgmiiPhy
+
+    rgmii_phy = RgmiiPhy(dut.txd, dut.tx_ctl, dut.tx_clk,
+        dut.rxd, dut.rx_ctl, dut.rx_clk, dut.rst, speed=1000e6)
+
+    rgmii_phy.set_speed(100e6)
+
+    await rgmii_phy.rx.send(GmiiFrame.from_payload(b'test RX data'))
+    tx_data = await rgmii_phy.tx.recv()
+
 #### Signals
 
 * `txd`, `rxd`: data (DDR)
@@ -201,6 +266,7 @@ To receive data with an `RgmiiSink`, call `recv()` or `recv_nowait()`.  Optional
 
 * _queue_occupancy_bytes_: number of bytes in queue
 * _queue_occupancy_frames_: number of frames in queue
+* _mii_mode_: control MII mode when _mii_select_ signal is not connected
 
 #### Methods
 
@@ -213,6 +279,18 @@ To receive data with an `RgmiiSink`, call `recv()` or `recv_nowait()`.  Optional
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
+
+#### RGMII timing diagram
+
+Example transfer via RGMII at 1 Gbps:
+
+                 ___     ___     ___     _       ___     ___
+    tx_clk     _/   \___/   \___/   \___/  ... _/   \___/   \___
+                       ___ ___ ___ ___ ___     ___ ___
+    tx_d[3:0]  XXXXXXXX_5_X_5_X_5_X_5_X_5_ ... _f_X_b_XXXXXXXXXX
+                       ___________________     _______
+    tx_ctl     _______/                    ...        \_________
+
 
 ### XGMII
 
@@ -266,6 +344,32 @@ To receive data with an `XgmiiSink`, call `recv()` or `recv_nowait()`.  Optional
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
+
+#### XGMII timing diagram
+
+Example transfer via 64-bit XGMII:
+
+                  __    __    __    __    __    _       __    __
+    tx_clk     __/  \__/  \__/  \__/  \__/  \__/  ... _/  \__/  \__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[63:56] __X_07__X_d5__X_51__X_01__X_09__X_ ... _X_fb__X_07__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[55:48] __X_07__X_55__X_5a__X_00__X_08__X_ ... _X_72__X_07__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[47:40] __X_07__X_55__X_d5__X_00__X_07__X_ ... _X_0d__X_07__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[39:32] __X_07__X_55__X_d4__X_80__X_06__X_ ... _X_37__X_07__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[31:24] __X_07__X_55__X_d3__X_55__X_05__X_ ... _X_2d__X_07__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[23:16] __X_07__X_55__X_d2__X_54__X_04__X_ ... _X_2c__X_07__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[15:8]  __X_07__X_55__X_d1__X_53__X_03__X_ ... _X_2b__X_07__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txd[7:0]   __X_07__X_fb__X_da__X_52__X_02__X_ ... _X_2a__X_fd__
+               __ _____ _____ _____ _____ _____ _     _ _____ _____
+    txc[7:0]   __X_ff__X_01__X_00__X_00__X_00__X_ ... _X_00__X_ff__
+
 
 #### XgmiiFrame object
 
