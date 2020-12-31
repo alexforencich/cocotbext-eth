@@ -294,7 +294,6 @@ async def run_drift_adjustment(dut):
 # cocotb-test
 
 tests_dir = os.path.dirname(__file__)
-rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
 def test_ptp_clock(request):
