@@ -93,6 +93,7 @@ The `GmiiPhy` class provides a model of a GMII PHY chip.  It wraps instances of 
 * `count()`: returns the number of items in the queue (all)
 * `empty()`: returns _True_ if the queue is empty (all)
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
+* `clear()`: drop all data in queue (all)
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
 
@@ -196,6 +197,7 @@ The `MiiPhy` class provides a model of an MII PHY chip.  It wraps instances of `
 * `count()`: returns the number of items in the queue (all)
 * `empty()`: returns _True_ if the queue is empty (all)
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
+* `clear()`: drop all data in queue (all)
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
 
@@ -277,6 +279,7 @@ The `RgmiiPhy` class provides a model of an RGMII PHY chip.  It wraps instances 
 * `count()`: returns the number of items in the queue (all)
 * `empty()`: returns _True_ if the queue is empty (all)
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
+* `clear()`: drop all data in queue (all)
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
 
@@ -342,6 +345,7 @@ To receive data with an `XgmiiSink`, call `recv()` or `recv_nowait()`.  Optional
 * `count()`: returns the number of items in the queue (all)
 * `empty()`: returns _True_ if the queue is empty (all)
 * `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
+* `clear()`: drop all data in queue (all)
 * `wait()`: wait for idle (source)
 * `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
 
