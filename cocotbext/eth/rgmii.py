@@ -127,10 +127,9 @@ class RgmiiSource(Reset):
         while True:
             await RisingEdge(self.clock)
 
-            if not self.mii_mode:
-                # send high nibble after rising edge, leading in to falling edge
-                self.data <= d >> 4
-                self.ctrl <= en ^ er
+            # send high nibble after rising edge, leading in to falling edge
+            self.data <= d >> 4
+            self.ctrl <= en ^ er
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt > 0:
@@ -153,8 +152,8 @@ class RgmiiSource(Reset):
                         mii_data = []
                         mii_error = []
                         for b, e in zip(frame.data, frame.error):
-                            mii_data.append(b & 0x0F)
-                            mii_data.append(b >> 4)
+                            mii_data.append((b & 0x0F)*0x11)
+                            mii_data.append((b >> 4)*0x11)
                             mii_error.append(e)
                             mii_error.append(e)
                         frame.data = mii_data
