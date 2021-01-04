@@ -41,6 +41,7 @@ class XgmiiFrame:
         self.data = bytearray()
         self.ctrl = None
         self.sim_time_start = None
+        self.sim_time_sfd = None
         self.sim_time_end = None
         self.start_lane = None
         self.tx_complete = None
@@ -49,6 +50,7 @@ class XgmiiFrame:
             self.data = bytearray(data.data)
             self.ctrl = data.ctrl
             self.sim_time_start = data.sim_time_start
+            self.sim_time_sfd = data.sim_time_sfd
             self.sim_time_end = data.sim_time_end
             self.start_lane = data.start_lane
             self.tx_complete = data.tx_complete
@@ -116,6 +118,7 @@ class XgmiiFrame:
             f"{type(self).__name__}(data={self.data!r}, "
             f"ctrl={self.ctrl!r}, "
             f"sim_time_start={self.sim_time_start!r}, "
+            f"sim_time_sfd={self.sim_time_sfd!r}, "
             f"sim_time_end={self.sim_time_end!r}, "
             f"start_lane={self.start_lane!r})"
         )
@@ -281,7 +284,10 @@ class XgmiiSource(Reset):
 
                     for k in range(self.byte_width):
                         if frame is not None:
-                            d_val |= frame.data.pop(0) << k*8
+                            d = frame.data.pop(0)
+                            if frame.sim_time_sfd is None and d == EthPre.SFD:
+                                frame.sim_time_sfd = get_sim_time()
+                            d_val |= d << k*8
                             c_val |= frame.ctrl.pop(0) << k
 
                             if not frame.data:
@@ -422,5 +428,8 @@ class XgmiiSink(Reset):
 
                             frame = None
                         else:
+                            if frame.sim_time_sfd is None and d_val == EthPre.SFD:
+                                frame.sim_time_sfd = get_sim_time()
+
                             frame.data.append(d_val)
                             frame.ctrl.append(c_val)

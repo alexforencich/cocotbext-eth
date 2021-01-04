@@ -166,6 +166,9 @@ class RgmiiSource(Reset):
                     er = frame.error.pop(0)
                     en = 1
 
+                    if frame.sim_time_sfd is None and d in (EthPre.SFD, 0xD, 0xDD):
+                        frame.sim_time_sfd = get_sim_time()
+
                     if not frame.data:
                         ifg_cnt = max(self.ifg, 1)
                         frame.sim_time_end = get_sim_time()
@@ -339,6 +342,9 @@ class RgmiiSink(Reset):
                         frame = None
 
                 if frame is not None:
+                    if frame.sim_time_sfd is None and d_val in (EthPre.SFD, 0xD, 0xDD):
+                        frame.sim_time_sfd = get_sim_time()
+
                     frame.data.append(d_val)
                     frame.error.append(er_val)
 

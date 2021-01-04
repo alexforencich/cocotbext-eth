@@ -41,6 +41,7 @@ class GmiiFrame:
         self.data = bytearray()
         self.error = None
         self.sim_time_start = None
+        self.sim_time_sfd = None
         self.sim_time_end = None
         self.tx_complete = None
 
@@ -48,6 +49,7 @@ class GmiiFrame:
             self.data = bytearray(data.data)
             self.error = data.error
             self.sim_time_start = data.sim_time_start
+            self.sim_time_sfd = data.sim_time_sfd
             self.sim_time_end = data.sim_time_end
             self.tx_complete = data.tx_complete
         else:
@@ -114,6 +116,7 @@ class GmiiFrame:
             f"{type(self).__name__}(data={self.data!r}, "
             f"error={self.error!r}, "
             f"sim_time_start={self.sim_time_start!r}, "
+            f"sim_time_sfd={self.sim_time_sfd!r}, "
             f"sim_time_end={self.sim_time_end!r})"
         )
 
@@ -253,7 +256,10 @@ class GmiiSource(Reset):
                     self.active = True
 
                 if frame is not None:
-                    self.data <= frame.data.pop(0)
+                    d = frame.data.pop(0)
+                    if frame.sim_time_sfd is None and d in (EthPre.SFD, 0xD):
+                        frame.sim_time_sfd = get_sim_time()
+                    self.data <= d
                     if self.er is not None:
                         self.er <= frame.error.pop(0)
                     self.dv <= 1
@@ -420,6 +426,9 @@ class GmiiSink(Reset):
                         frame = None
 
                 if frame is not None:
+                    if frame.sim_time_sfd is None and d_val in (EthPre.SFD, 0xD):
+                        frame.sim_time_sfd = get_sim_time()
+
                     frame.data.append(d_val)
                     frame.error.append(er_val)
 

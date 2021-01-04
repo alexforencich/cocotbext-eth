@@ -155,7 +155,10 @@ class MiiSource(Reset):
                     self.active = True
 
                 if frame is not None:
-                    self.data <= frame.data.pop(0)
+                    d = frame.data.pop(0)
+                    if frame.sim_time_sfd is None and d == 0xD:
+                        frame.sim_time_sfd = get_sim_time()
+                    self.data <= d
                     if self.er is not None:
                         self.er <= frame.error.pop(0)
                     self.dv <= 1
@@ -314,6 +317,9 @@ class MiiSink(Reset):
                         frame = None
 
                 if frame is not None:
+                    if frame.sim_time_sfd is None and d_val == 0xD:
+                        frame.sim_time_sfd = get_sim_time()
+
                     frame.data.append(d_val)
                     frame.error.append(er_val)
 
