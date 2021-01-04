@@ -119,7 +119,10 @@ Attributes:
 
 * `data`: bytearray
 * `error`: error field, optional; list, each entry qualifies the corresponding entry in `data`.
-* `rx_sim_time`: simulation time when packet was received by sink.
+* `sim_time_start`: simulation time of first transfer cycle of frame.
+* `sim_time_end`: simulation time of last transfer cycle of frame.
+* `start_lane`: byte lane in which the start control character was transferred.
+* `tx_complete`: event or callable triggered when frame is transmitted.
 
 Methods:
 
@@ -383,8 +386,10 @@ Attributes:
 
 * `data`: bytearray
 * `ctrl`: control field, optional; list, each entry qualifies the corresponding entry in `data` as an XGMII control character.
-* `rx_sim_time`: simulation time when packet was received by sink.
-* `rx_start_lane`: byte lane that the frame start control character was received in.
+* `sim_time_start`: simulation time of first transfer cycle of frame.
+* `sim_time_end`: simulation time of last transfer cycle of frame.
+* `start_lane`: byte lane in which the start control character was transferred.
+* `tx_complete`: event or callable triggered when frame is transmitted.
 
 Methods:
 

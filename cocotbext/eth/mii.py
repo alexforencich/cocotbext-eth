@@ -138,6 +138,7 @@ class MiiSource(Reset):
                     frame = self.queue.popleft()
                     self.queue_occupancy_bytes -= len(frame)
                     self.queue_occupancy_frames -= 1
+                    frame.sim_time_start = get_sim_time()
                     self.log.info("TX frame: %s", frame)
                     frame.normalize()
 
@@ -161,6 +162,8 @@ class MiiSource(Reset):
 
                     if not frame.data:
                         ifg_cnt = max(self.ifg, 1)
+                        frame.sim_time_end = get_sim_time()
+                        frame.handle_tx_complete()
                         frame = None
                 else:
                     self.data <= 0
@@ -274,7 +277,7 @@ class MiiSink(Reset):
                     if dv_val:
                         # start of frame
                         frame = GmiiFrame(bytearray(), [])
-                        frame.rx_sim_time = get_sim_time()
+                        frame.sim_time_start = get_sim_time()
                 else:
                     if not dv_val:
                         # end of frame
@@ -299,6 +302,7 @@ class MiiSink(Reset):
                         frame.error = error
 
                         frame.compact()
+                        frame.sim_time_end = get_sim_time()
                         self.log.info("RX frame: %s", frame)
 
                         self.queue_occupancy_bytes += len(frame)

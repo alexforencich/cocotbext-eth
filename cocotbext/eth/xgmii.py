@@ -37,20 +37,25 @@ from .reset import Reset
 
 
 class XgmiiFrame:
-    def __init__(self, data=None, ctrl=None):
+    def __init__(self, data=None, ctrl=None, tx_complete=None):
         self.data = bytearray()
         self.ctrl = None
-        self.rx_sim_time = None
-        self.rx_start_lane = None
+        self.sim_time_start = None
+        self.sim_time_end = None
+        self.start_lane = None
+        self.tx_complete = None
 
         if type(data) is XgmiiFrame:
             self.data = bytearray(data.data)
             self.ctrl = data.ctrl
-            self.rx_sim_time = data.rx_sim_time
-            self.rx_start_lane = data.rx_start_lane
+            self.sim_time_start = data.sim_time_start
+            self.sim_time_end = data.sim_time_end
+            self.start_lane = data.start_lane
+            self.tx_complete = data.tx_complete
         else:
             self.data = bytearray(data)
             self.ctrl = ctrl
+            self.tx_complete = tx_complete
 
     @classmethod
     def from_payload(cls, payload, min_len=60):
@@ -96,6 +101,12 @@ class XgmiiFrame:
         if not any(self.ctrl):
             self.ctrl = None
 
+    def handle_tx_complete(self):
+        if isinstance(self.tx_complete, Event):
+            self.tx_complete.set(self)
+        elif callable(self.tx_complete):
+            self.tx_complete(self)
+
     def __eq__(self, other):
         if type(other) is XgmiiFrame:
             return self.data == other.data
@@ -104,8 +115,9 @@ class XgmiiFrame:
         return (
             f"{type(self).__name__}(data={self.data!r}, "
             f"ctrl={self.ctrl!r}, "
-            f"rx_sim_time={self.rx_sim_time!r}, "
-            f"rx_start_lane={self.rx_start_lane!r})"
+            f"sim_time_start={self.sim_time_start!r}, "
+            f"sim_time_end={self.sim_time_end!r}, "
+            f"start_lane={self.start_lane!r})"
         )
 
     def __len__(self):
@@ -231,8 +243,10 @@ class XgmiiSource(Reset):
                         frame = self.queue.popleft()
                         self.queue_occupancy_bytes -= len(frame)
                         self.queue_occupancy_frames -= 1
+                        frame.sim_time_start = get_sim_time()
                         self.log.info("TX frame: %s", frame)
                         frame.normalize()
+                        frame.start_lane = 0
                         assert frame.data[0] == EthPre.PRE
                         assert frame.ctrl[0] == 0
                         frame.data[0] = XgmiiCtrl.START
@@ -248,6 +262,7 @@ class XgmiiSource(Reset):
 
                         if self.byte_width > 4 and (ifg_cnt > min_ifg or self.force_offset_start):
                             ifg_cnt = ifg_cnt-4
+                            frame.start_lane = 4
                             frame.data = bytearray([XgmiiCtrl.IDLE]*4)+frame.data
                             frame.ctrl = [1]*4+frame.ctrl
 
@@ -271,6 +286,8 @@ class XgmiiSource(Reset):
 
                             if not frame.data:
                                 ifg_cnt = max(self.ifg - (self.byte_width-k), 0)
+                                frame.sim_time_end = get_sim_time()
+                                frame.handle_tx_complete()
                                 frame = None
                         else:
                             d_val |= XgmiiCtrl.IDLE << k*8
@@ -383,8 +400,8 @@ class XgmiiSink(Reset):
                         if c_val and d_val == XgmiiCtrl.START:
                             # start
                             frame = XgmiiFrame(bytearray([EthPre.PRE]), [0])
-                            frame.rx_sim_time = get_sim_time()
-                            frame.rx_start_lane = offset
+                            frame.sim_time_start = get_sim_time()
+                            frame.start_lane = offset
                     else:
                         if c_val:
                             # got a control character; terminate frame reception
@@ -394,6 +411,7 @@ class XgmiiSink(Reset):
                                 frame.ctrl.append(c_val)
 
                             frame.compact()
+                            frame.sim_time_end = get_sim_time()
                             self.log.info("RX frame: %s", frame)
 
                             self.queue_occupancy_bytes += len(frame)

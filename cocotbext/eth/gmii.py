@@ -37,18 +37,23 @@ from .reset import Reset
 
 
 class GmiiFrame:
-    def __init__(self, data=None, error=None):
+    def __init__(self, data=None, error=None, tx_complete=None):
         self.data = bytearray()
         self.error = None
-        self.rx_sim_time = None
+        self.sim_time_start = None
+        self.sim_time_end = None
+        self.tx_complete = None
 
         if type(data) is GmiiFrame:
             self.data = bytearray(data.data)
             self.error = data.error
-            self.rx_sim_time = data.rx_sim_time
+            self.sim_time_start = data.sim_time_start
+            self.sim_time_end = data.sim_time_end
+            self.tx_complete = data.tx_complete
         else:
             self.data = bytearray(data)
             self.error = error
+            self.tx_complete = tx_complete
 
     @classmethod
     def from_payload(cls, payload, min_len=60):
@@ -94,6 +99,12 @@ class GmiiFrame:
         if not any(self.error):
             self.error = None
 
+    def handle_tx_complete(self):
+        if isinstance(self.tx_complete, Event):
+            self.tx_complete.set(self)
+        elif callable(self.tx_complete):
+            self.tx_complete(self)
+
     def __eq__(self, other):
         if type(other) is GmiiFrame:
             return self.data == other.data
@@ -102,7 +113,8 @@ class GmiiFrame:
         return (
             f"{type(self).__name__}(data={self.data!r}, "
             f"error={self.error!r}, "
-            f"rx_sim_time={self.rx_sim_time!r})"
+            f"sim_time_start={self.sim_time_start!r}, "
+            f"sim_time_end={self.sim_time_end!r})"
         )
 
     def __len__(self):
@@ -220,6 +232,7 @@ class GmiiSource(Reset):
                     frame = self.queue.popleft()
                     self.queue_occupancy_bytes -= len(frame)
                     self.queue_occupancy_frames -= 1
+                    frame.sim_time_start = get_sim_time()
                     self.log.info("TX frame: %s", frame)
                     frame.normalize()
 
@@ -247,6 +260,8 @@ class GmiiSource(Reset):
 
                     if not frame.data:
                         ifg_cnt = max(self.ifg, 1)
+                        frame.sim_time_end = get_sim_time()
+                        frame.handle_tx_complete()
                         frame = None
                 else:
                     self.data <= 0
@@ -363,7 +378,7 @@ class GmiiSink(Reset):
                     if dv_val:
                         # start of frame
                         frame = GmiiFrame(bytearray(), [])
-                        frame.rx_sim_time = get_sim_time()
+                        frame.sim_time_start = get_sim_time()
                 else:
                     if not dv_val:
                         # end of frame
@@ -393,6 +408,7 @@ class GmiiSink(Reset):
                             frame.error = error
 
                         frame.compact()
+                        frame.sim_time_end = get_sim_time()
                         self.log.info("RX frame: %s", frame)
 
                         self.queue_occupancy_bytes += len(frame)
