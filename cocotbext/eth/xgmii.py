@@ -57,21 +57,23 @@ class XgmiiFrame:
         else:
             self.data = bytearray(data)
             self.ctrl = ctrl
+
+        if tx_complete is not None:
             self.tx_complete = tx_complete
 
     @classmethod
-    def from_payload(cls, payload, min_len=60):
+    def from_payload(cls, payload, min_len=60, tx_complete=None):
         payload = bytearray(payload)
         if len(payload) < min_len:
             payload.extend(bytearray(min_len-len(payload)))
         payload.extend(struct.pack('<L', zlib.crc32(payload)))
-        return cls.from_raw_payload(payload)
+        return cls.from_raw_payload(payload, tx_complete=tx_complete)
 
     @classmethod
-    def from_raw_payload(cls, payload):
+    def from_raw_payload(cls, payload, tx_complete=None):
         data = bytearray(ETH_PREAMBLE)
         data.extend(payload)
-        return cls(data)
+        return cls(data, tx_complete=tx_complete)
 
     def get_preamble_len(self):
         return self.data.index(EthPre.SFD)+1
