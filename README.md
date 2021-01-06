@@ -46,6 +46,13 @@ To send data into a design with a `GmiiSource`, call `send()` or `send_nowait()`
     # wait for operation to complete (optional)
     await gmii_source.wait()
 
+It is also possible to wait for the transmission of a specific frame to complete by passing an event in the tx_complete field of the `GmiiFrame` object, and then awaiting the event.  The frame, with simulation time fields set, will be returned in the event data.  Example:
+
+    frame = GmiiFrame.from_payload(b'test data', tx_complete=Event())
+    await gmii_source.send(frame)
+    await frame.tx_complete.wait()
+    print(frame.tx_complete.data.sim_time_sfd)
+
 To receive data with a `GmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await gmii_sink.recv()
@@ -156,6 +163,13 @@ To send data into a design with an `MiiSource`, call `send()` or `send_nowait()`
     # wait for operation to complete (optional)
     await mii_source.wait()
 
+It is also possible to wait for the transmission of a specific frame to complete by passing an event in the tx_complete field of the `GmiiFrame` object, and then awaiting the event.  The frame, with simulation time fields set, will be returned in the event data.  Example:
+
+    frame = GmiiFrame.from_payload(b'test data', tx_complete=Event())
+    await mii_source.send(frame)
+    await frame.tx_complete.wait()
+    print(frame.tx_complete.data.sim_time_sfd)
+
 To receive data with an `MiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await mii_sink.recv()
@@ -238,6 +252,13 @@ To send data into a design with an `RgmiiSource`, call `send()` or `send_nowait(
     # wait for operation to complete (optional)
     await rgmii_source.wait()
 
+It is also possible to wait for the transmission of a specific frame to complete by passing an event in the tx_complete field of the `GmiiFrame` object, and then awaiting the event.  The frame, with simulation time fields set, will be returned in the event data.  Example:
+
+    frame = GmiiFrame.from_payload(b'test data', tx_complete=Event())
+    await rgmii_source.send(frame)
+    await frame.tx_complete.wait()
+    print(frame.tx_complete.data.sim_time_sfd)
+
 To receive data with an `RgmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
     data = await rgmii_sink.recv()
@@ -317,6 +338,13 @@ To send data into a design with an `XgmiiSource`, call `send()` or `send_nowait(
     await xgmii_source.send(XgmiiFrame.from_payload(b'test data'))
     # wait for operation to complete (optional)
     await xgmii_source.wait()
+
+It is also possible to wait for the transmission of a specific frame to complete by passing an event in the tx_complete field of the `XgmiiFrame` object, and then awaiting the event.  The frame, with simulation time fields set, will be returned in the event data.  Example:
+
+    frame = XgmiiFrame.from_payload(b'test data', tx_complete=Event())
+    await xgmii_source.send(frame)
+    await frame.tx_complete.wait()
+    print(frame.tx_complete.data.sim_time_sfd)
 
 To receive data with an `XgmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
 
