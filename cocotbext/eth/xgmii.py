@@ -249,6 +249,8 @@ class XgmiiSource(Reset):
                         self.queue_occupancy_bytes -= len(frame)
                         self.queue_occupancy_frames -= 1
                         frame.sim_time_start = get_sim_time()
+                        frame.sim_time_sfd = None
+                        frame.sim_time_end = None
                         self.log.info("TX frame: %s", frame)
                         frame.normalize()
                         frame.start_lane = 0
