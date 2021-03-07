@@ -134,7 +134,7 @@ class GmiiFrame:
 
 class GmiiSource(Reset):
 
-    def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+    def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, reset_active_level=True, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self.data = data
         self.er = er
@@ -173,7 +173,7 @@ class GmiiSource(Reset):
 
         self._run_cr = None
 
-        self._init_reset(reset)
+        self._init_reset(reset, reset_active_level)
 
     async def send(self, frame):
         self.send_nowait(frame)
@@ -283,7 +283,7 @@ class GmiiSource(Reset):
 
 class GmiiSink(Reset):
 
-    def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+    def __init__(self, data, er, dv, clock, reset=None, enable=None, mii_select=None, reset_active_level=True, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self.data = data
         self.er = er
@@ -320,7 +320,7 @@ class GmiiSink(Reset):
 
         self._run_cr = None
 
-        self._init_reset(reset)
+        self._init_reset(reset, reset_active_level)
 
     async def recv(self, compact=True):
         while self.empty():
@@ -439,7 +439,7 @@ class GmiiSink(Reset):
 
 class GmiiPhy:
     def __init__(self, txd, tx_er, tx_en, tx_clk, gtx_clk, rxd, rx_er, rx_dv, rx_clk,
-            reset=None, speed=1000e6, *args, **kwargs):
+            reset=None, reset_active_level=True, speed=1000e6, *args, **kwargs):
 
         self.gtx_clk = gtx_clk
         self.tx_clk = tx_clk
@@ -447,8 +447,8 @@ class GmiiPhy:
 
         super().__init__(*args, **kwargs)
 
-        self.tx = GmiiSink(txd, tx_er, tx_en, tx_clk, reset)
-        self.rx = GmiiSource(rxd, rx_er, rx_dv, rx_clk, reset)
+        self.tx = GmiiSink(txd, tx_er, tx_en, tx_clk, reset, reset_active_level=reset_active_level)
+        self.rx = GmiiSource(rxd, rx_er, rx_dv, rx_clk, reset_active_level=reset_active_level)
 
         self.rx_clk.setimmediatevalue(0)
 

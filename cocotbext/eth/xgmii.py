@@ -137,7 +137,7 @@ class XgmiiFrame:
 
 class XgmiiSource(Reset):
 
-    def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, reset_active_level=True, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self.data = data
         self.ctrl = ctrl
@@ -179,7 +179,7 @@ class XgmiiSource(Reset):
 
         self._run_cr = None
 
-        self._init_reset(reset)
+        self._init_reset(reset, reset_active_level)
 
     async def send(self, frame):
         self.send_nowait(frame)
@@ -313,7 +313,7 @@ class XgmiiSource(Reset):
 
 class XgmiiSink(Reset):
 
-    def __init__(self, data, ctrl, clock, reset=None, enable=None, *args, **kwargs):
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, reset_active_level=True, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self.data = data
         self.ctrl = ctrl
@@ -342,7 +342,7 @@ class XgmiiSink(Reset):
 
         self._run_cr = None
 
-        self._init_reset(reset)
+        self._init_reset(reset, reset_active_level)
 
     async def recv(self, compact=True):
         while self.empty():

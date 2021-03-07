@@ -37,7 +37,9 @@ from .reset import Reset
 
 class RgmiiSource(Reset):
 
-    def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None,
+            reset_active_level=True, *args, **kwargs):
+
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self.data = data
         self.ctrl = ctrl
@@ -72,7 +74,7 @@ class RgmiiSource(Reset):
 
         self._run_cr = None
 
-        self._init_reset(reset)
+        self._init_reset(reset, reset_active_level)
 
     async def send(self, frame):
         self.send_nowait(frame)
@@ -191,7 +193,9 @@ class RgmiiSource(Reset):
 
 class RgmiiSink(Reset):
 
-    def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None, *args, **kwargs):
+    def __init__(self, data, ctrl, clock, reset=None, enable=None, mii_select=None,
+            reset_active_level=True, *args, **kwargs):
+
         self.log = logging.getLogger(f"cocotb.{data._path}")
         self.data = data
         self.ctrl = ctrl
@@ -224,7 +228,7 @@ class RgmiiSink(Reset):
 
         self._run_cr = None
 
-        self._init_reset(reset)
+        self._init_reset(reset, reset_active_level)
 
     async def recv(self, compact=True):
         while self.empty():
@@ -352,14 +356,16 @@ class RgmiiSink(Reset):
 
 
 class RgmiiPhy:
-    def __init__(self, txd, tx_ctl, tx_clk, rxd, rx_ctl, rx_clk, reset=None, speed=1000e6, *args, **kwargs):
+    def __init__(self, txd, tx_ctl, tx_clk, rxd, rx_ctl, rx_clk, reset=None,
+            reset_active_level=True, speed=1000e6, *args, **kwargs):
+
         self.tx_clk = tx_clk
         self.rx_clk = rx_clk
 
         super().__init__(*args, **kwargs)
 
-        self.tx = RgmiiSink(txd, tx_ctl, tx_clk, reset)
-        self.rx = RgmiiSource(rxd, rx_ctl, rx_clk, reset)
+        self.tx = RgmiiSink(txd, tx_ctl, tx_clk, reset, reset_active_level=reset_active_level)
+        self.rx = RgmiiSource(rxd, rx_ctl, rx_clk, reset, reset_active_level=reset_active_level)
 
         self.rx_clk.setimmediatevalue(0)
 

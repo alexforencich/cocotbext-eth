@@ -43,6 +43,7 @@ class PtpClock(Reset):
             pps=None,
             clock=None,
             reset=None,
+            reset_active_level=True,
             period_ns=6.4,
             *args, **kwargs):
 
@@ -90,7 +91,7 @@ class PtpClock(Reset):
 
         self._run_cr = None
 
-        self._init_reset(reset)
+        self._init_reset(reset, reset_active_level)
 
     def set_period(self, ns, fns):
         self.period_ns = int(ns)
