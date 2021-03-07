@@ -3,6 +3,7 @@
 [![Build Status](https://github.com/alexforencich/cocotbext-eth/workflows/Regression%20Tests/badge.svg?branch=master)](https://github.com/alexforencich/cocotbext-eth/actions/)
 [![codecov](https://codecov.io/gh/alexforencich/cocotbext-eth/branch/master/graph/badge.svg)](https://codecov.io/gh/alexforencich/cocotbext-eth)
 [![PyPI version](https://badge.fury.io/py/cocotbext-eth.svg)](https://pypi.org/project/cocotbext-eth)
+[![Downloads](https://pepy.tech/badge/cocotbext-eth)](https://pepy.tech/project/cocotbext-eth)
 
 GitHub repository: https://github.com/alexforencich/cocotbext-eth
 
@@ -84,6 +85,7 @@ The `GmiiPhy` class provides a model of a GMII PHY chip.  It wraps instances of 
 * _reset_: reset signal (optional)
 * _enable_: clock enable (optional)
 * _mii_select_: MII mode select (optional)
+* _reset_active_level_: reset active level (optional, default `True`)
 
 #### Attributes:
 
@@ -200,6 +202,7 @@ The `MiiPhy` class provides a model of an MII PHY chip.  It wraps instances of `
 * _clock_: clock signal
 * _reset_: reset signal (optional)
 * _enable_: clock enable (optional)
+* _reset_active_level_: reset active level (optional, default `True`)
 
 #### Attributes:
 
@@ -288,6 +291,7 @@ The `RgmiiPhy` class provides a model of an RGMII PHY chip.  It wraps instances 
 * _reset_: reset signal (optional)
 * _enable_: clock enable (optional)
 * _mii_select_: MII mode select (optional)
+* _reset_active_level_: reset active level (optional, default `True`)
 
 #### Attributes:
 
@@ -362,6 +366,7 @@ To receive data with an `XgmiiSink`, call `recv()` or `recv_nowait()`.  Optional
 * _clock_: clock signal
 * _reset_: reset signal (optional)
 * _enable_: clock enable (optional)
+* _reset_active_level_: reset active level (optional, default `True`)
 
 #### Attributes:
 
@@ -468,7 +473,8 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 * _pps_: pulse-per-second signal (optional)
 * _clock_: clock
 * _reset_: reset (optional)
-* _period_ns_: clock period (nanoseconds)
+* _reset_active_level_: reset active level (optional, default `True`)
+* _period_ns_: clock period (nanoseconds, default `6.4`)
 
 #### Attributes:
 
