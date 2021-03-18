@@ -25,9 +25,9 @@ THE SOFTWARE.
 import logging
 import struct
 import zlib
-from collections import deque
 
 import cocotb
+from cocotb.queue import Queue
 from cocotb.triggers import RisingEdge, Timer, First, Event
 from cocotb.utils import get_sim_time
 
@@ -153,7 +153,9 @@ class XgmiiSource(Reset):
         super().__init__(*args, **kwargs)
 
         self.active = False
-        self.queue = deque()
+        self.queue = Queue()
+        self.idle_event = Event()
+        self.idle_event.set()
 
         self.enable_dic = True
         self.ifg = 12
@@ -182,31 +184,37 @@ class XgmiiSource(Reset):
         self._init_reset(reset, reset_active_level)
 
     async def send(self, frame):
-        self.send_nowait(frame)
+        frame = XgmiiFrame(frame)
+        await self.queue.put(frame)
+        self.idle_event.clear()
+        self.queue_occupancy_bytes += len(frame)
+        self.queue_occupancy_frames += 1
 
     def send_nowait(self, frame):
         frame = XgmiiFrame(frame)
+        self.queue.put_nowait(frame)
+        self.idle_event.clear()
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
-        self.queue.append(frame)
 
     def count(self):
-        return len(self.queue)
+        return self.queue.qsize()
 
     def empty(self):
-        return not self.queue
+        return self.queue.empty()
 
     def idle(self):
         return self.empty() and not self.active
 
     def clear(self):
-        self.queue.clear()
+        while not self.queue.empty():
+            self.queue.get_nowait()
+        self.idle_event.set()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
     async def wait(self):
-        while not self.idle():
-            await RisingEdge(self.clock)
+        await self.idle_event.wait()
 
     def _handle_reset(self, state):
         if state:
@@ -243,9 +251,9 @@ class XgmiiSource(Reset):
 
                 elif frame is None:
                     # idle
-                    if self.queue:
+                    if not self.queue.empty():
                         # send frame
-                        frame = self.queue.popleft()
+                        frame = self.queue.get_nowait()
                         self.queue_occupancy_bytes -= len(frame)
                         self.queue_occupancy_frames -= 1
                         frame.sim_time_start = get_sim_time()
@@ -309,6 +317,7 @@ class XgmiiSource(Reset):
                     self.data <= self.idle_d
                     self.ctrl <= self.idle_c
                     self.active = False
+                    self.idle_event.set()
 
 
 class XgmiiSink(Reset):
@@ -329,8 +338,8 @@ class XgmiiSink(Reset):
         super().__init__(*args, **kwargs)
 
         self.active = False
-        self.queue = deque()
-        self.sync = Event()
+        self.queue = Queue()
+        self.active_event = Event()
 
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
@@ -345,41 +354,46 @@ class XgmiiSink(Reset):
         self._init_reset(reset, reset_active_level)
 
     async def recv(self, compact=True):
-        while self.empty():
-            self.sync.clear()
-            await self.sync.wait()
-        return self.recv_nowait(compact)
+        frame = await self.queue.get()
+        if self.queue.empty():
+            self.active_event.clear()
+        self.queue_occupancy_bytes -= len(frame)
+        self.queue_occupancy_frames -= 1
+        return frame
 
     def recv_nowait(self, compact=True):
-        if self.queue:
-            frame = self.queue.popleft()
+        if not self.queue.empty():
+            frame = self.queue.get_nowait()
+            if self.queue.empty():
+                self.active_event.clear()
             self.queue_occupancy_bytes -= len(frame)
             self.queue_occupancy_frames -= 1
             return frame
         return None
 
     def count(self):
-        return len(self.queue)
+        return self.queue.qsize()
 
     def empty(self):
-        return not self.queue
+        return self.queue.empty()
 
     def idle(self):
         return not self.active
 
     def clear(self):
-        self.queue.clear()
+        while not self.queue.empty():
+            self.queue.get_nowait()
+        self.active_event.clear()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
     async def wait(self, timeout=0, timeout_unit=None):
         if not self.empty():
             return
-        self.sync.clear()
         if timeout:
-            await First(self.sync.wait(), Timer(timeout, timeout_unit))
+            await First(self.active_event.wait(), Timer(timeout, timeout_unit))
         else:
-            await self.sync.wait()
+            await self.active_event.wait()
 
     def _handle_reset(self, state):
         if state:
@@ -427,8 +441,8 @@ class XgmiiSink(Reset):
                             self.queue_occupancy_bytes += len(frame)
                             self.queue_occupancy_frames += 1
 
-                            self.queue.append(frame)
-                            self.sync.set()
+                            self.queue.put_nowait(frame)
+                            self.active_event.set()
 
                             frame = None
                         else:
