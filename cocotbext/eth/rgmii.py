@@ -117,14 +117,14 @@ class RgmiiSource(Reset):
             if self._run_cr is not None:
                 self._run_cr.kill()
                 self._run_cr = None
+
+            self.active = False
+            self.data <= 0
+            self.ctrl <= 0
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
                 self._run_cr = cocotb.scheduler.start_soon(self._run())
-
-        self.active = False
-        self.data <= 0
-        self.ctrl <= 0
 
     async def _run(self):
         frame = None
@@ -287,12 +287,12 @@ class RgmiiSink(Reset):
             if self._run_cr is not None:
                 self._run_cr.kill()
                 self._run_cr = None
+
+            self.active = False
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
                 self._run_cr = cocotb.scheduler.start_soon(self._run())
-
-        self.active = False
 
     async def _run(self):
         frame = None
