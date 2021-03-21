@@ -222,6 +222,9 @@ class GmiiSource(Reset):
             if self.er is not None:
                 self.er <= 0
             self.dv <= 0
+
+            if self.queue.empty():
+                self.idle_event.set()
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:

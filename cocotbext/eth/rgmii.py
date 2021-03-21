@@ -121,6 +121,9 @@ class RgmiiSource(Reset):
             self.active = False
             self.data <= 0
             self.ctrl <= 0
+
+            if self.queue.empty():
+                self.idle_event.set()
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
