@@ -57,6 +57,7 @@ class RgmiiSource(Reset):
 
         self.active = False
         self.queue = Queue()
+        self.current_frame = None
         self.idle_event = Event()
         self.idle_event.set()
 
@@ -122,6 +123,11 @@ class RgmiiSource(Reset):
             self.data <= 0
             self.ctrl <= 0
 
+            if self.current_frame:
+                self.log.warning("Flushed transmit frame during reset: %s", self.current_frame)
+                self.current_frame.handle_tx_complete()
+                self.current_frame = None
+
             if self.queue.empty():
                 self.idle_event.set()
         else:
@@ -154,6 +160,7 @@ class RgmiiSource(Reset):
                     frame = self.queue.get_nowait()
                     self.queue_occupancy_bytes -= len(frame)
                     self.queue_occupancy_frames -= 1
+                    self.current_frame = frame
                     frame.sim_time_start = get_sim_time()
                     frame.sim_time_sfd = None
                     frame.sim_time_end = None
@@ -189,6 +196,7 @@ class RgmiiSource(Reset):
                         frame.sim_time_end = get_sim_time()
                         frame.handle_tx_complete()
                         frame = None
+                        self.current_frame = None
                 else:
                     d = 0
                     er = 0
