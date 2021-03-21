@@ -225,7 +225,7 @@ class XgmiiSource(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.scheduler.start_soon(self._run())
 
         self.active = False
         self.data <= 0
@@ -404,7 +404,7 @@ class XgmiiSink(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.scheduler.start_soon(self._run())
 
         self.active = False
 

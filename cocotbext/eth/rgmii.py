@@ -120,7 +120,7 @@ class RgmiiSource(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.scheduler.start_soon(self._run())
 
         self.active = False
         self.data <= 0
@@ -290,7 +290,7 @@ class RgmiiSink(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.scheduler.start_soon(self._run())
 
         self.active = False
 
@@ -396,11 +396,11 @@ class RgmiiPhy:
             self._clock_cr.kill()
 
         if self.speed == 1000e6:
-            self._clock_cr = cocotb.fork(self._run_clock(8*1e9/self.speed))
+            self._clock_cr = cocotb.scheduler.start_soon(self._run_clock(8*1e9/self.speed))
             self.tx.mii_mode = False
             self.rx.mii_mode = False
         else:
-            self._clock_cr = cocotb.fork(self._run_clock(4*1e9/self.speed))
+            self._clock_cr = cocotb.scheduler.start_soon(self._run_clock(4*1e9/self.speed))
             self.tx.mii_mode = True
             self.rx.mii_mode = True
 

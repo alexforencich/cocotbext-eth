@@ -189,7 +189,7 @@ class PtpClock(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.scheduler.start_soon(self._run())
 
         self.ts_96_s = 0
         self.ts_96_ns = 0
