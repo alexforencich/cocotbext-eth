@@ -104,7 +104,9 @@ class MiiSource(Reset):
 
     def clear(self):
         while not self.queue.empty():
-            self.queue.get_nowait()
+            frame = self.queue.get_nowait()
+            frame.sim_time_end = None
+            frame.handle_tx_complete()
         self.idle_event.set()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
