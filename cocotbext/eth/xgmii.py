@@ -102,7 +102,7 @@ class XgmiiFrame:
             self.ctrl = [0]*n
 
     def compact(self):
-        if not any(self.ctrl):
+        if self.ctrl is not None and not any(self.ctrl):
             self.ctrl = None
 
     def handle_tx_complete(self):

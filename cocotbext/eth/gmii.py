@@ -100,7 +100,7 @@ class GmiiFrame:
             self.error = [0]*n
 
     def compact(self):
-        if not any(self.error):
+        if self.error is not None and not any(self.error):
             self.error = None
 
     def handle_tx_complete(self):
