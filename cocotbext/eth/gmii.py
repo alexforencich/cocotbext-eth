@@ -27,7 +27,7 @@ import struct
 import zlib
 
 import cocotb
-from cocotb.queue import Queue
+from cocotb.queue import Queue, QueueFull
 from cocotb.triggers import RisingEdge, Timer, First, Event
 from cocotb.utils import get_sim_time, get_sim_steps
 
@@ -153,6 +153,7 @@ class GmiiSource(Reset):
 
         self.active = False
         self.queue = Queue()
+        self.dequeue_event = Event()
         self.current_frame = None
         self.idle_event = Event()
         self.idle_event.set()
@@ -162,6 +163,9 @@ class GmiiSource(Reset):
 
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
+
+        self.queue_occupancy_limit_bytes = -1
+        self.queue_occupancy_limit_frames = -1
 
         self.width = 8
         self.byte_width = 1
@@ -179,6 +183,9 @@ class GmiiSource(Reset):
         self._init_reset(reset, reset_active_level)
 
     async def send(self, frame):
+        while self.full():
+            self.dequeue_event.clear()
+            await self.dequeue_event.wait()
         frame = GmiiFrame(frame)
         await self.queue.put(frame)
         self.idle_event.clear()
@@ -186,6 +193,8 @@ class GmiiSource(Reset):
         self.queue_occupancy_frames += 1
 
     def send_nowait(self, frame):
+        if self.full():
+            raise QueueFull()
         frame = GmiiFrame(frame)
         self.queue.put_nowait(frame)
         self.idle_event.clear()
@@ -198,6 +207,14 @@ class GmiiSource(Reset):
     def empty(self):
         return self.queue.empty()
 
+    def full(self):
+        if self.queue_occupancy_limit_bytes > 0 and self.queue_occupancy_bytes > self.queue_occupancy_limit_bytes:
+            return True
+        elif self.queue_occupancy_limit_frames > 0 and self.queue_occupancy_frames > self.queue_occupancy_limit_frames:
+            return True
+        else:
+            return False
+
     def idle(self):
         return self.empty() and not self.active
 
@@ -206,6 +223,7 @@ class GmiiSource(Reset):
             frame = self.queue.get_nowait()
             frame.sim_time_end = None
             frame.handle_tx_complete()
+        self.dequeue_event.set()
         self.idle_event.set()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
@@ -254,6 +272,7 @@ class GmiiSource(Reset):
                 elif frame is None and not self.queue.empty():
                     # send frame
                     frame = self.queue.get_nowait()
+                    self.dequeue_event.set()
                     self.queue_occupancy_bytes -= len(frame)
                     self.queue_occupancy_frames -= 1
                     self.current_frame = frame
