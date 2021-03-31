@@ -28,6 +28,7 @@ from fractions import Fraction
 
 import cocotb
 from cocotb.triggers import RisingEdge
+from cocotb.utils import get_sim_time
 
 from .version import __version__
 from .reset import Reset
@@ -253,3 +254,79 @@ class PtpClock(Reset):
                     self.drift_cnt -= 1
                 else:
                     self.drift_cnt = self.drift_rate-1
+
+
+class PtpClockSimTime:
+
+    def __init__(self, ts_96=None, ts_64=None, pps=None, clock=None, *args, **kwargs):
+        self.log = logging.getLogger(f"cocotb.eth.{type(self).__name__}")
+        self.ts_96 = ts_96
+        self.ts_64 = ts_64
+        self.pps = pps
+        self.clock = clock
+
+        self.log.info("PTP clock (sim time)")
+        self.log.info("cocotbext-eth version %s", __version__)
+        self.log.info("Copyright (c) 2020 Alex Forencich")
+        self.log.info("https://github.com/alexforencich/cocotbext-eth")
+
+        super().__init__(*args, **kwargs)
+
+        self.ts_96_s = 0
+        self.ts_96_ns = 0
+        self.ts_96_fns = 0
+
+        self.ts_64_ns = 0
+        self.ts_64_fns = 0
+
+        self.last_ts_96_s = 0
+
+        if self.ts_96 is not None:
+            self.ts_96.setimmediatevalue(0)
+        if self.ts_64 is not None:
+            self.ts_64.setimmediatevalue(0)
+        if self.pps is not None:
+            self.pps <= 0
+
+        self._run_cr = cocotb.fork(self._run())
+
+    def get_ts_96(self):
+        return (self.ts_96_s << 48) | (self.ts_96_ns << 16) | self.ts_96_fns
+
+    def get_ts_96_ns(self):
+        return self.ts_96_s*1e9+self.ts_96_ns+self.ts_96_fns/2**16
+
+    def get_ts_96_s(self):
+        return self.get_ts_96_ns()*1e-9
+
+    def get_ts_64(self):
+        return (self.ts_64_ns << 16) | self.ts_64_fns
+
+    def get_ts_64_ns(self):
+        return self.get_ts_64()/2**16
+
+    def get_ts_64_s(self):
+        return self.get_ts_64()*1e-9
+
+    async def _run(self):
+        while True:
+            await RisingEdge(self.clock)
+
+            self.ts_64_fns, self.ts_64_ns = math.modf(get_sim_time('ns'))
+
+            self.ts_64_ns = int(self.ts_64_ns)
+            self.ts_64_fns = int(self.ts_64_fns*0x10000)
+
+            self.ts_96_s, self.ts_96_ns = divmod(self.ts_64_ns, 1000000000)
+            self.ts_96_fns = self.ts_64_fns
+
+            if self.ts_96 is not None:
+                self.ts_96 <= (self.ts_96_s << 48) | (self.ts_96_ns << 16) | self.ts_96_fns
+
+            if self.ts_64 is not None:
+                self.ts_64 <= (self.ts_64_ns << 16) | self.ts_64_fns
+
+            if self.pps is not None:
+                self.pps <= int(self.last_ts_96_s != self.ts_96_s)
+
+            self.last_ts_96_s = self.ts_96_s

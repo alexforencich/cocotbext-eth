@@ -506,3 +506,50 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 * `get_ts_64()`: return current 64-bit timestamp as an integer
 * `get_ts_64_ns()`: return current 64-bit timestamp in ns (float)
 * `get_ts_64_s()`: return current 64-bit timestamp in seconds (float)
+
+### PTP clock (sim time)
+
+The `PtpClockSimTime` class implements a PTP hardware clock that produces IEEE 1588 format 96 and 64 bit PTP timestamps, derived from the current simulation time.  This module can be used in place of `PtpClock` so that captured PTP timestamps can be easily compared to captured simulation time.
+
+To use this module, import it and connect it to the DUT:
+
+    from cocotbext.eth import PtpClockSimTime
+
+    ptp_clock = PtpClockSimTime(
+        ts_96=dut.ts_96,
+        ts_64=dut.ts_64,
+        pps=dut.pps,
+        clock=dut.clk
+    )
+
+Once the clock is instantiated, it will generate a continuous stream of monotonically increasing PTP timestamps on every clock edge.
+
+#### Signals
+
+* `ts_96`: 96-bit timestamp (48 bit seconds, 32 bit ns, 16 bit fractional ns)
+* `ts_64`: 64-bit timestamp (48 bit ns, 16 bit fractional ns)
+* `pps`: pulse-per-second output, pulsed when ts_96 seconds field increments
+
+#### Constructor parameters:
+
+* _ts_96_: 96-bit timestamp signal (optional)
+* _ts_64_: 64-bit timestamp signal (optional)
+* _pps_: pulse-per-second signal (optional)
+* _clock_: clock
+
+#### Attributes:
+
+* _ts_96_s_: current 96-bit timestamp seconds field
+* _ts_96_ns_: current 96-bit timestamp ns field
+* _ts_96_fns_: current 96-bit timestamp fractional ns field
+* _ts_64_ns_: current 64-bit timestamp ns field
+* _ts_64_fns_: current 64-bit timestamp fractional ns field
+
+#### Methods
+
+* `get_ts_96()`: return current 96-bit timestamp as an integer
+* `get_ts_96_ns()`: return current 96-bit timestamp in ns (float)
+* `get_ts_96_s()`: return current 96-bit timestamp in seconds (float)
+* `get_ts_64()`: return current 64-bit timestamp as an integer
+* `get_ts_64_ns()`: return current 64-bit timestamp in ns (float)
+* `get_ts_64_s()`: return current 64-bit timestamp in seconds (float)
