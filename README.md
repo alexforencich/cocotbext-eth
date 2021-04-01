@@ -11,6 +11,8 @@ GitHub repository: https://github.com/alexforencich/cocotbext-eth
 
 Ethernet interface models for [cocotb](https://github.com/cocotb/cocotb).
 
+Includes PHY-attach interface models for MII, GMII, RGMII, and XGMII; PHY chip interface models for MII, GMII, and RGMII; PTP clock simulation models; and a generic Ethernet MAC model that supports rate enforcement and PTP timestamping.
+
 ## Installation
 
 Installation from pip (release version, stable):
@@ -91,6 +93,8 @@ The `GmiiPhy` class provides a model of a GMII PHY chip.  It wraps instances of 
 
 * _queue_occupancy_bytes_: number of bytes in queue
 * _queue_occupancy_frames_: number of frames in queue
+* _queue_occupancy_limit_bytes_: max number of bytes in queue allowed before backpressure is applied (source only)
+* _queue_occupancy_limit_frames_: max number of frames in queue allowed before backpressure is applied (source only)
 * _mii_mode_: control MII mode when _mii_select_ signal is not connected
 
 #### Methods
@@ -209,6 +213,8 @@ The `MiiPhy` class provides a model of an MII PHY chip.  It wraps instances of `
 
 * _queue_occupancy_bytes_: number of bytes in queue
 * _queue_occupancy_frames_: number of frames in queue
+* _queue_occupancy_limit_bytes_: max number of bytes in queue allowed before backpressure is applied (source only)
+* _queue_occupancy_limit_frames_: max number of frames in queue allowed before backpressure is applied (source only)
 
 #### Methods
 
@@ -299,6 +305,8 @@ The `RgmiiPhy` class provides a model of an RGMII PHY chip.  It wraps instances 
 
 * _queue_occupancy_bytes_: number of bytes in queue
 * _queue_occupancy_frames_: number of frames in queue
+* _queue_occupancy_limit_bytes_: max number of bytes in queue allowed before backpressure is applied (source only)
+* _queue_occupancy_limit_frames_: max number of frames in queue allowed before backpressure is applied (source only)
 * _mii_mode_: control MII mode when _mii_select_ signal is not connected
 
 #### Methods
@@ -375,6 +383,8 @@ To receive data with an `XgmiiSink`, call `recv()` or `recv_nowait()`.  Optional
 
 * _queue_occupancy_bytes_: number of bytes in queue
 * _queue_occupancy_frames_: number of frames in queue
+* _queue_occupancy_limit_bytes_: max number of bytes in queue allowed before backpressure is applied (source only)
+* _queue_occupancy_limit_frames_: max number of frames in queue allowed before backpressure is applied (source only)
 
 #### Methods
 
@@ -439,8 +449,132 @@ Methods:
 * `get_payload(strip_fcs=True)`: return payload, optionally strip FCS
 * `get_fcs()`: return FCS
 * `check_fcs()`: returns _True_ if FCS is correct
-* `normalize()`: pack `error` to the same length as `data`, replicating last element if necessary, initialize to list of `0` if not specified.
-* `compact()`: remove `error` if all zero
+* `normalize()`: pack `ctrl` to the same length as `data`, replicating last element if necessary, initialize to list of `0` if not specified.
+* `compact()`: remove `ctrl` if all zero
+
+### Ethernet MAC model
+
+The `EthMac`, `EthMacTx` and `EthMacRx` modules are models of an Ethernet MAC with an AXI stream interface.  The `EthMacRx` module drives Ethernet frames in the form of AXI stream traffic into a design.  The `EthMacTx` module accepts Ethernet frames in the form of AXI stream traffic from a design.  `EthMac` is a wrapper module containing `EthMacRx` (`rx`) and `EthMacTx` (`tx`).  The modules are capable of operating with any interface width.  The MAC models enforce the correct data rates and timings in both the receive and transmit direction, and can also collect PTP timestamps from a PTP hardware clock.
+
+To use these modules, import the one you need and connect it to the DUT:
+
+    from cocotbext.axi import AxiStreamBus
+    from cocotbext.eth import EthMac
+
+    mac = EthMac(
+        tx_clk=dut.tx_clk,
+        tx_rst=dut.tx_rst,
+        tx_bus=AxiStreamBus.from_prefix(dut, "tx_axis"),
+        tx_ptp_time=dut.tx_ptp_time,
+        tx_ptp_ts=dut.tx_ptp_ts,
+        tx_ptp_ts_valid=dut.tx_ptp_ts_valid,
+        rx_clk=dut.rx_clk,
+        rx_rst=dut.rx_rst,
+        rx_bus=AxiStreamBus.from_prefix(dut, "rx_axis"),
+        rx_ptp_time=dut.rx_ptp_time,
+        ifg=12, speed=speed
+    )
+
+To send data into a design, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `EthMacFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
+
+    await mac.tx.send(EthMacFrame.from_payload(b'test data'))
+    # wait for operation to complete (optional)
+    await mac.tx.wait()
+
+It is also possible to wait for the transmission of a specific frame to complete by passing an event in the tx_complete field of the `EthMacFrame` object, and then awaiting the event.  The frame, with simulation time fields set, will be returned in the event data.  Example:
+
+    frame = EthMacFrame.from_payload(b'test data', tx_complete=Event())
+    await mac.tx.send(frame)
+    await frame.tx_complete.wait()
+    print(frame.tx_complete.data.sim_time_sfd)
+
+To receive data, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
+
+    data = await mac.tx.recv()
+
+#### Signals
+
+* `tdata`: payload data, must be a multiple of 8 bits
+* `tvalid`: qualifies all other signals
+* `tready`: indicates sink is ready for data (tx only)
+* `tlast`: marks the last cycle of a frame
+* `tkeep`: qualifies data byte, data bus width must be evenly divisible by `tkeep` signal width
+* `tuser`: user data, carries frame error mark and captured receive PTP timestamp
+* `ptp_time`: PTP time input from PHC, captured into `ptp_timestamp` field coincident with transfer of frame SFD and output on `ptp_ts`
+* `ptp_ts`: captured transmit PTP timestamp
+* `ptp_ts_valid`: qualifies captured transmit PTP timestamp
+
+#### Constructor parameters (`EthMacRx` and `EthMacTx`):
+
+* _bus_: `AxiStreamBus` object containing AXI stream interface signals
+* _clock_: clock signal
+* _reset_: reset signal (optional)
+* _ptp_time_: PTP time input from PHC (optional)
+* _ptp_ts_: PTP timestamp output (optional) (tx)
+* _ptp_ts_valid_: PTP timestamp valid (optional) (tx)
+* _reset_active_level_: reset active level (optional, default `True`)
+* _ifg_: IFG size in byte times (optional, default `12`)
+* _speed_: link speed in bits per second (optional, default `1000e6`)
+
+#### Constructor parameters (`EthMac`):
+
+* _tx_bus_: `AxiStreamBus` object containing transmit AXI stream interface signals
+* _tx_clk_: transmit clock
+* _tx_rst_: transmit reset (optional)
+* _tx_ptp_time_: transmit PTP time input from PHC (optional)
+* _tx_ptp_ts_: transmit PTP timestamp output (optional)
+* _tx_ptp_ts_valid_: transmit PTP timestamp valid (optional)
+* _rx_bus_: `AxiStreamBus` object containing receive AXI stream interface signals
+* _rx_clk_: receive clock
+* _rx_rst_: receive reset (optional)
+* _rx_ptp_time_: receive PTP time input from PHC (optional)
+* _reset_active_level_: reset active level (optional, default `True`)
+* _ifg_: IFG size in byte times (optional, default `12`)
+* _speed_: link speed in bits per second (optional, default `1000e6`)
+
+#### Attributes:
+
+* _queue_occupancy_bytes_: number of bytes in queue
+* _queue_occupancy_frames_: number of frames in queue
+* _queue_occupancy_limit_bytes_: max number of bytes in queue allowed before backpressure is applied (RX only)
+* _queue_occupancy_limit_frames_: max number of frames in queue allowed before backpressure is applied (RX only)
+* _ifg_: IFG size in byte times
+* _speed_: link speed in bits per second
+
+#### Methods
+
+* `send(frame)`: send _frame_ (blocking) (rx)
+* `send_nowait(frame)`: send _frame_ (non-blocking) (rx)
+* `recv()`: receive a frame as an `EthMacFrame` (blocking) (tx)
+* `recv_nowait()`: receive a frame as an `EthMacFrame` (non-blocking) (tx)
+* `count()`: returns the number of items in the queue (all)
+* `empty()`: returns _True_ if the queue is empty (all)
+* `full()`: returns _True_ if the queue occupancy limits are met (rx)
+* `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (rx)
+* `clear()`: drop all data in queue (all)
+* `wait()`: wait for idle (rx)
+* `wait(timeout=0, timeout_unit='ns')`: wait for frame received (tx)
+
+#### EthMacFrame object
+
+The `EthMacFrame` object is a container for a frame to be transferred via XGMII.  The `data` field contains the packet data in the form of a list of bytes.
+
+Attributes:
+
+* `data`: bytearray
+* `sim_time_start`: simulation time of first transfer cycle of frame.
+* `sim_time_sfd`: simulation time at which the SFD was transferred.
+* `sim_time_end`: simulation time of last transfer cycle of frame.
+* `ptp_timestamp`: captured value of `ptp_time` at frame SFD
+* `tx_complete`: event or callable triggered when frame is transmitted.
+
+Methods:
+
+* `from_payload(payload, min_len=60)`: create `EthMacFrame` from payload data, zero-pads frame to minimum length and computes and inserts FCS (class method)
+* `from_raw_payload(payload)`: create `EthMacFrame` from payload data (class method)
+* `get_payload(strip_fcs=True)`: return payload, optionally strip FCS
+* `get_fcs()`: return FCS
+* `check_fcs()`: returns _True_ if FCS is correct
 
 ### PTP clock
 
