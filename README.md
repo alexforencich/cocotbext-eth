@@ -30,7 +30,7 @@ Installation for active development:
 
 ## Documentation and usage examples
 
-See the `tests` directory and [verilog-ethernet](https://github.com/alexforencich/verilog-ethernet) for complete testbenches using these modules.
+See the `tests` directory, [verilog-ethernet](https://github.com/alexforencich/verilog-ethernet), and [corundum](https://github.com/corundum/corundum) for complete testbenches using these modules.
 
 ### GMII
 
