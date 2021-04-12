@@ -262,6 +262,7 @@ class XgmiiSource(Reset):
 
     async def _run(self):
         frame = None
+        frame_offset = 0
         ifg_cnt = 0
         deficit_idle_cnt = 0
         self.active = False
@@ -316,6 +317,7 @@ class XgmiiSource(Reset):
                             deficit_idle_cnt = max(deficit_idle_cnt+ifg_cnt, 0)
                         ifg_cnt = 0
                         self.active = True
+                        frame_offset = 0
                     else:
                         # clear counters
                         deficit_idle_cnt = 0
@@ -327,13 +329,14 @@ class XgmiiSource(Reset):
 
                     for k in range(self.byte_width):
                         if frame is not None:
-                            d = frame.data.pop(0)
+                            d = frame.data[frame_offset]
                             if frame.sim_time_sfd is None and d == EthPre.SFD:
                                 frame.sim_time_sfd = get_sim_time()
                             d_val |= d << k*8
-                            c_val |= frame.ctrl.pop(0) << k
+                            c_val |= frame.ctrl[frame_offset] << k
+                            frame_offset += 1
 
-                            if not frame.data:
+                            if frame_offset >= len(frame.data):
                                 ifg_cnt = max(self.ifg - (self.byte_width-k), 0)
                                 frame.sim_time_end = get_sim_time()
                                 frame.handle_tx_complete()

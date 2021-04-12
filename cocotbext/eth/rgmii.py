@@ -157,6 +157,9 @@ class RgmiiSource(Reset):
 
     async def _run(self):
         frame = None
+        frame_offset = 0
+        frame_data = None
+        frame_error = None
         ifg_cnt = 0
         self.active = False
         d = 0
@@ -192,27 +195,31 @@ class RgmiiSource(Reset):
                         self.mii_mode = bool(self.mii_select.value.integer)
 
                     if self.mii_mode:
-                        mii_data = []
-                        mii_error = []
+                        # convert to MII
+                        frame_data = []
+                        frame_error = []
                         for b, e in zip(frame.data, frame.error):
-                            mii_data.append((b & 0x0F)*0x11)
-                            mii_data.append((b >> 4)*0x11)
-                            mii_error.append(e)
-                            mii_error.append(e)
-                        frame.data = mii_data
-                        frame.error = mii_error
+                            frame_data.append((b & 0x0F)*0x11)
+                            frame_data.append((b >> 4)*0x11)
+                            frame_error.append(e)
+                            frame_error.append(e)
+                    else:
+                        frame_data = frame.data
+                        frame_error = frame.error
 
                     self.active = True
+                    frame_offset = 0
 
                 if frame is not None:
-                    d = frame.data.pop(0)
-                    er = frame.error.pop(0)
+                    d = frame_data[frame_offset]
+                    er = frame_error[frame_offset]
                     en = 1
+                    frame_offset += 1
 
                     if frame.sim_time_sfd is None and d in (EthPre.SFD, 0xD, 0xDD):
                         frame.sim_time_sfd = get_sim_time()
 
-                    if not frame.data:
+                    if frame_offset >= len(frame_data):
                         ifg_cnt = max(self.ifg, 1)
                         frame.sim_time_end = get_sim_time()
                         frame.handle_tx_complete()

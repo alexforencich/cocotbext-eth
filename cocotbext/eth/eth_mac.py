@@ -462,6 +462,7 @@ class EthMacRx(Reset):
 
     async def _run(self):
         frame = None
+        frame_offset = 0
         tuser = 0
         self.active = False
 
@@ -477,6 +478,7 @@ class EthMacRx(Reset):
             frame.sim_time_sfd = None
             frame.sim_time_end = None
             self.log.info("TX frame: %s", frame)
+            frame_offset = 0
 
             # wait for preamble time
             await Timer(self.time_scale*8*8//self.speed, 'step')
@@ -499,11 +501,12 @@ class EthMacRx(Reset):
                 cycle.tuser = tuser
 
                 for offset in range(self.byte_lanes):
-                    cycle.tdata |= (frame.data.pop(0) & self.byte_mask) << (offset * self.byte_size)
+                    cycle.tdata |= (frame.data[frame_offset] & self.byte_mask) << (offset * self.byte_size)
                     cycle.tkeep |= 1 << offset
                     byte_count += 1
+                    frame_offset += 1
 
-                    if len(frame.data) == 0:
+                    if frame_offset >= len(frame.data):
                         cycle.tlast = 1
                         frame.sim_time_end = get_sim_time()
                         frame.handle_tx_complete()
