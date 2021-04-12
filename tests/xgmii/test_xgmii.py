@@ -123,7 +123,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
 
     tb = TB(dut)
 
-    byte_width = tb.source.width // 8
+    byte_lanes = tb.source.byte_lanes
 
     tb.source.ifg = ifg
     tb.source.enable_dic = enable_dic
@@ -164,23 +164,23 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
         for test_data in test_frames:
             if ifg == 0:
                 lane = 0
-            if force_offset_start and byte_width > 4:
+            if force_offset_start and byte_lanes > 4:
                 lane = 4
 
             start_lane_ref.append(lane)
-            lane = (lane + len(test_data)+4+ifg) % byte_width
+            lane = (lane + len(test_data)+4+ifg) % byte_lanes
 
             if enable_dic:
                 offset = lane % 4
                 if deficit_idle_count+offset >= 4:
                     offset += 4
-                lane = (lane - offset) % byte_width
+                lane = (lane - offset) % byte_lanes
                 deficit_idle_count = (deficit_idle_count + offset) % 4
             else:
                 offset = lane % 4
                 if offset > 0:
                     offset += 4
-                lane = (lane - offset) % byte_width
+                lane = (lane - offset) % byte_lanes
 
         tb.log.info("start_lane_ref: %s", start_lane_ref)
 

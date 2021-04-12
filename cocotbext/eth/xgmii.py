@@ -170,14 +170,14 @@ class XgmiiSource(Reset):
         self.queue_occupancy_limit_frames = -1
 
         self.width = len(self.data)
-        self.byte_width = len(self.ctrl)
+        self.byte_lanes = len(self.ctrl)
 
-        assert self.width == self.byte_width * 8
+        assert self.width == self.byte_lanes * 8
 
         self.idle_d = 0
         self.idle_c = 0
 
-        for k in range(self.byte_width):
+        for k in range(self.byte_lanes):
             self.idle_d |= XgmiiCtrl.IDLE << k*8
             self.idle_c |= 1 << k
 
@@ -271,9 +271,9 @@ class XgmiiSource(Reset):
             await RisingEdge(self.clock)
 
             if self.enable is None or self.enable.value:
-                if ifg_cnt + deficit_idle_cnt > self.byte_width-1 or (not self.enable_dic and ifg_cnt > 4):
+                if ifg_cnt + deficit_idle_cnt > self.byte_lanes-1 or (not self.enable_dic and ifg_cnt > 4):
                     # in IFG
-                    ifg_cnt = ifg_cnt - self.byte_width
+                    ifg_cnt = ifg_cnt - self.byte_lanes
                     if ifg_cnt < 0:
                         if self.enable_dic:
                             deficit_idle_cnt = max(deficit_idle_cnt+ifg_cnt, 0)
@@ -307,7 +307,7 @@ class XgmiiSource(Reset):
                         else:
                             min_ifg = 0
 
-                        if self.byte_width > 4 and (ifg_cnt > min_ifg or self.force_offset_start):
+                        if self.byte_lanes > 4 and (ifg_cnt > min_ifg or self.force_offset_start):
                             ifg_cnt = ifg_cnt-4
                             frame.start_lane = 4
                             frame.data = bytearray([XgmiiCtrl.IDLE]*4)+frame.data
@@ -327,7 +327,7 @@ class XgmiiSource(Reset):
                     d_val = 0
                     c_val = 0
 
-                    for k in range(self.byte_width):
+                    for k in range(self.byte_lanes):
                         if frame is not None:
                             d = frame.data[frame_offset]
                             if frame.sim_time_sfd is None and d == EthPre.SFD:
@@ -337,7 +337,7 @@ class XgmiiSource(Reset):
                             frame_offset += 1
 
                             if frame_offset >= len(frame.data):
-                                ifg_cnt = max(self.ifg - (self.byte_width-k), 0)
+                                ifg_cnt = max(self.ifg - (self.byte_lanes-k), 0)
                                 frame.sim_time_end = get_sim_time()
                                 frame.handle_tx_complete()
                                 frame = None
@@ -380,9 +380,9 @@ class XgmiiSink(Reset):
         self.queue_occupancy_frames = 0
 
         self.width = len(self.data)
-        self.byte_width = len(self.ctrl)
+        self.byte_lanes = len(self.ctrl)
 
-        assert self.width == self.byte_width * 8
+        assert self.width == self.byte_lanes * 8
 
         self._run_cr = None
 
@@ -450,7 +450,7 @@ class XgmiiSink(Reset):
             await RisingEdge(self.clock)
 
             if self.enable is None or self.enable.value:
-                for offset in range(self.byte_width):
+                for offset in range(self.byte_lanes):
                     d_val = (self.data.value.integer >> (offset*8)) & 0xff
                     c_val = (self.ctrl.value.integer >> offset) & 1
 
