@@ -172,6 +172,10 @@ class EthMacTx(Reset):
             self.log.info("  tuser width: %d bits", len(self.bus.tuser))
         else:
             self.log.info("  tuser: not present")
+        if self.ptp_time:
+            self.log.info("  ptp_time width: %d bits", len(self.ptp_time))
+        else:
+            self.log.info("  ptp_time: not present")
 
         if self.bus.tready is None:
             raise ValueError("tready is required")
@@ -378,6 +382,10 @@ class EthMacRx(Reset):
             self.log.info("  tuser width: %d bits", len(self.bus.tuser))
         else:
             self.log.info("  tuser: not present")
+        if self.ptp_time:
+            self.log.info("  ptp_time width: %d bits", len(self.ptp_time))
+        else:
+            self.log.info("  ptp_time: not present")
 
         if self.byte_size != 8:
             raise ValueError("Byte size must be 8")

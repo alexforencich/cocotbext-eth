@@ -170,9 +170,14 @@ class XgmiiSource(Reset):
         self.queue_occupancy_limit_frames = -1
 
         self.width = len(self.data)
+        self.byte_size = 8
         self.byte_lanes = len(self.ctrl)
 
-        assert self.width == self.byte_lanes * 8
+        assert self.width == self.byte_lanes * self.byte_size
+
+        self.log.info("XGMII source model configuration")
+        self.log.info("  Byte size: %d bits", self.byte_size)
+        self.log.info("  Data width: %d bits (%d bytes)", self.width, self.byte_lanes)
 
         self.idle_d = 0
         self.idle_c = 0
@@ -380,9 +385,14 @@ class XgmiiSink(Reset):
         self.queue_occupancy_frames = 0
 
         self.width = len(self.data)
+        self.byte_size = 8
         self.byte_lanes = len(self.ctrl)
 
-        assert self.width == self.byte_lanes * 8
+        assert self.width == self.byte_lanes * self.byte_size
+
+        self.log.info("XGMII sink model configuration")
+        self.log.info("  Byte size: %d bits", self.byte_size)
+        self.log.info("  Data width: %d bits (%d bytes)", self.width, self.byte_lanes)
 
         self._run_cr = None
 
