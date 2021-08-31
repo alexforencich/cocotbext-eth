@@ -467,6 +467,7 @@ To use these modules, import the one you need and connect it to the DUT:
         tx_bus=AxiStreamBus.from_prefix(dut, "tx_axis"),
         tx_ptp_time=dut.tx_ptp_time,
         tx_ptp_ts=dut.tx_ptp_ts,
+        tx_ptp_ts_tag=dut.tx_ptp_ts_tag,
         tx_ptp_ts_valid=dut.tx_ptp_ts_valid,
         rx_clk=dut.rx_clk,
         rx_rst=dut.rx_rst,
@@ -492,6 +493,8 @@ To receive data, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to 
 
     data = await mac.tx.recv()
 
+PTP timestamping requires free-running PTP clocks driving the PTP time inputs, synchronous with the corresponding MAC clocks.  The values of these fields are then captured when the frame SFD is transferred and returned either on tuser (for received frames) or on a separate streaming interface (for transmitted frames).  Additionally, on the transmit path, a tag value from tuser is returned along with the timestamp.
+
 #### Signals
 
 * `tdata`: payload data, must be a multiple of 8 bits
@@ -499,9 +502,10 @@ To receive data, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to 
 * `tready`: indicates sink is ready for data (tx only)
 * `tlast`: marks the last cycle of a frame
 * `tkeep`: qualifies data byte, data bus width must be evenly divisible by `tkeep` signal width
-* `tuser`: user data, carries frame error mark and captured receive PTP timestamp
-* `ptp_time`: PTP time input from PHC, captured into `ptp_timestamp` field coincident with transfer of frame SFD and output on `ptp_ts`
+* `tuser`: user data, carries frame error mark and captured receive PTP timestamp (RX) or PTP timestamp tag (TX)
+* `ptp_time`: PTP time input from PHC, captured into `ptp_timestamp` field coincident with transfer of frame SFD and output on `ptp_ts` (TX) or `tuser` (RX)
 * `ptp_ts`: captured transmit PTP timestamp
+* `ptp_ts_tag`: captured transmit PTP timestamp tag
 * `ptp_ts_valid`: qualifies captured transmit PTP timestamp
 
 #### Constructor parameters (`EthMacRx` and `EthMacTx`):
@@ -510,7 +514,8 @@ To receive data, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to 
 * _clock_: clock signal
 * _reset_: reset signal (optional)
 * _ptp_time_: PTP time input from PHC (optional)
-* _ptp_ts_: PTP timestamp output (optional) (tx)
+* _ptp_ts_: PTP timestamp (optional) (tx)
+* _ptp_ts_tag_: PTP timestamp tag (optional) (tx)
 * _ptp_ts_valid_: PTP timestamp valid (optional) (tx)
 * _reset_active_level_: reset active level (optional, default `True`)
 * _ifg_: IFG size in byte times (optional, default `12`)
@@ -522,7 +527,8 @@ To receive data, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to 
 * _tx_clk_: transmit clock
 * _tx_rst_: transmit reset (optional)
 * _tx_ptp_time_: transmit PTP time input from PHC (optional)
-* _tx_ptp_ts_: transmit PTP timestamp output (optional)
+* _tx_ptp_ts_: transmit PTP timestamp (optional)
+* _tx_ptp_ts_tag_: transmit PTP timestamp tag (optional)
 * _tx_ptp_ts_valid_: transmit PTP timestamp valid (optional)
 * _rx_bus_: `AxiStreamBus` object containing receive AXI stream interface signals
 * _rx_clk_: receive clock
@@ -565,6 +571,7 @@ Attributes:
 * `sim_time_start`: simulation time of first transfer cycle of frame.
 * `sim_time_sfd`: simulation time at which the SFD was transferred.
 * `sim_time_end`: simulation time of last transfer cycle of frame.
+* `ptp_tag`: PTP timestamp tag for transmitted frames.
 * `ptp_timestamp`: captured value of `ptp_time` at frame SFD
 * `tx_complete`: event or callable triggered when frame is transmitted.
 
