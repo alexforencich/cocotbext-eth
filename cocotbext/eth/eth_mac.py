@@ -49,6 +49,7 @@ class EthMacFrame:
         self.sim_time_sfd = None
         self.sim_time_end = None
         self.ptp_timestamp = None
+        self.ptp_tag = None
         self.tx_complete = None
 
         if type(data) is EthMacFrame:
@@ -57,6 +58,7 @@ class EthMacFrame:
             self.sim_time_sfd = data.sim_time_sfd
             self.sim_time_end = data.sim_time_end
             self.ptp_timestamp = data.ptp_timestamp
+            self.ptp_tag = data.ptp_tag
             self.tx_complete = data.tx_complete
         else:
             self.data = bytearray(data)
@@ -104,7 +106,8 @@ class EthMacFrame:
             f"sim_time_start={self.sim_time_start!r}, "
             f"sim_time_sfd={self.sim_time_sfd!r}, "
             f"sim_time_end={self.sim_time_end!r}, "
-            f"ptp_timestamp={self.ptp_timestamp!r})"
+            f"ptp_timestamp={self.ptp_timestamp!r}, "
+            f"ptp_tag={self.ptp_tag!r})"
         )
 
     def __len__(self):
@@ -118,7 +121,7 @@ class EthMacFrame:
 
 
 class EthMacTx(Reset):
-    def __init__(self, bus, clock, reset=None, ptp_time=None, ptp_ts=None, ptp_ts_valid=None,
+    def __init__(self, bus, clock, reset=None, ptp_time=None, ptp_ts=None, ptp_ts_tag=None, ptp_ts_valid=None,
             reset_active_level=True, ifg=12, speed=1000e6, *args, **kwargs):
 
         self.bus = bus
@@ -126,6 +129,7 @@ class EthMacTx(Reset):
         self.reset = reset
         self.ptp_time = ptp_time
         self.ptp_ts = ptp_ts
+        self.ptp_ts_tag = ptp_ts_tag
         self.ptp_ts_valid = ptp_ts_valid
         self.ifg = ifg
         self.speed = speed
@@ -189,6 +193,8 @@ class EthMacTx(Reset):
 
         if self.ptp_ts:
             self.ptp_ts.setimmediatevalue(0)
+        if self.ptp_ts_tag:
+            self.ptp_ts_tag.setimmediatevalue(0)
         if self.ptp_ts_valid:
             self.ptp_ts_valid.setimmediatevalue(0)
 
@@ -278,7 +284,8 @@ class EthMacTx(Reset):
 
             if self.ptp_time:
                 frame.ptp_timestamp = self.ptp_time.value.integer
-                self.ts_queue.put_nowait(frame.ptp_timestamp)
+                frame.ptp_tag = cycle.tuser.integer >> 1
+                self.ts_queue.put_nowait((frame.ptp_timestamp, frame.ptp_tag))
 
             # process frame data
             while True:
@@ -320,8 +327,10 @@ class EthMacTx(Reset):
             self.ptp_ts_valid <= 0
 
             if not self.ts_queue.empty():
-                ts = self.ts_queue.get_nowait()
+                ts, tag = self.ts_queue.get_nowait()
                 self.ptp_ts <= ts
+                if self.ptp_ts_tag is not None:
+                    self.ptp_ts_tag <= tag
                 self.ptp_ts_valid <= 1
 
 
@@ -532,13 +541,13 @@ class EthMacRx(Reset):
 
 
 class EthMac:
-    def __init__(self, tx_bus=None, tx_clk=None, tx_rst=None, tx_ptp_time=None, tx_ptp_ts=None, tx_ptp_ts_valid=None,
-            rx_bus=None, rx_clk=None, rx_rst=None, rx_ptp_time=None,
+    def __init__(self, tx_bus=None, tx_clk=None, tx_rst=None, tx_ptp_time=None, tx_ptp_ts=None, tx_ptp_ts_tag=None,
+            tx_ptp_ts_valid=None, rx_bus=None, rx_clk=None, rx_rst=None, rx_ptp_time=None,
             reset_active_level=True, ifg=12, speed=1000e6, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
-        self.tx = EthMacTx(tx_bus, tx_clk, tx_rst, tx_ptp_time, tx_ptp_ts, tx_ptp_ts_valid,
+        self.tx = EthMacTx(tx_bus, tx_clk, tx_rst, tx_ptp_time, tx_ptp_ts, tx_ptp_ts_tag, tx_ptp_ts_valid,
             reset_active_level=reset_active_level, ifg=ifg, speed=speed)
         self.rx = EthMacRx(rx_bus, rx_clk, rx_rst, rx_ptp_time,
             reset_active_level=reset_active_level, ifg=ifg, speed=speed)

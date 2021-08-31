@@ -36,11 +36,12 @@ module test_eth_mac
     inout  wire [63:0] tx_axis_tdata,
     inout  wire [7:0]  tx_axis_tkeep,
     inout  wire        tx_axis_tlast,
-    inout  wire        tx_axis_tuser,
+    inout  wire [16:0] tx_axis_tuser,
     inout  wire        tx_axis_tvalid,
     inout  wire        tx_axis_tready,
     inout  wire [95:0] tx_ptp_time,
     inout  wire [95:0] tx_ptp_ts,
+    inout  wire [15:0] tx_ptp_ts_tag,
     inout  wire        tx_ptp_ts_valid,
 
     inout  wire        rx_clk,
