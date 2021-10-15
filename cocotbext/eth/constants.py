@@ -42,12 +42,12 @@ class XgmiiCtrl(enum.IntEnum):
     TERM   = 0xfd
     ERROR  = 0xfe
     SEQ_OS = 0x9c
-    RES0   = 0x1c
-    RES1   = 0x3c
-    RES2   = 0x7c
-    RES3   = 0xbc
-    RES4   = 0xdc
-    RES5   = 0xf7
+    RES_0  = 0x1c
+    RES_1  = 0x3c
+    RES_2  = 0x7c
+    RES_3  = 0xbc
+    RES_4  = 0xdc
+    RES_5  = 0xf7
     SIG_OS = 0x5c
 
 
