@@ -195,13 +195,13 @@ class PtpClock(Reset):
             self.ts_64_fns = 0
             self.drift_cnt = 0
             if self.ts_96 is not None:
-                self.ts_96 <= 0
+                self.ts_96.value = 0
             if self.ts_64 is not None:
-                self.ts_64 <= 0
+                self.ts_64.value = 0
             if self.ts_step is not None:
-                self.ts_step <= 0
+                self.ts_step.value = 0
             if self.pps is not None:
-                self.pps <= 0
+                self.pps.value = 0
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
@@ -212,11 +212,11 @@ class PtpClock(Reset):
             await RisingEdge(self.clock)
 
             if self.ts_step is not None:
-                self.ts_step <= self.ts_updated
+                self.ts_step.value = self.ts_updated
                 self.ts_updated = False
 
             if self.pps is not None:
-                self.pps <= 0
+                self.pps.value = 0
 
             # increment 96 bit timestamp
             if self.ts_96 is not None or self.pps is not None:
@@ -229,13 +229,13 @@ class PtpClock(Reset):
                     self.ts_96_s += 1
                     t -= (1000000000 << 16)
                     if self.pps is not None:
-                        self.pps <= 1
+                        self.pps.value = 1
 
                 self.ts_96_fns = t & 0xffff
                 self.ts_96_ns = t >> 16
 
                 if self.ts_96 is not None:
-                    self.ts_96 <= (self.ts_96_s << 48) | (self.ts_96_ns << 16) | (self.ts_96_fns)
+                    self.ts_96.value = (self.ts_96_s << 48) | (self.ts_96_ns << 16) | (self.ts_96_fns)
 
             # increment 64 bit timestamp
             if self.ts_64 is not None:
@@ -247,7 +247,7 @@ class PtpClock(Reset):
                 self.ts_64_fns = t & 0xffff
                 self.ts_64_ns = t >> 16
 
-                self.ts_64 <= (self.ts_64_ns << 16) | self.ts_64_fns
+                self.ts_64.value = (self.ts_64_ns << 16) | self.ts_64_fns
 
             if self.drift_rate:
                 if self.drift_cnt > 0:
@@ -286,7 +286,7 @@ class PtpClockSimTime:
         if self.ts_64 is not None:
             self.ts_64.setimmediatevalue(0)
         if self.pps is not None:
-            self.pps <= 0
+            self.pps.value = 0
 
         self._run_cr = cocotb.fork(self._run())
 
@@ -321,12 +321,12 @@ class PtpClockSimTime:
             self.ts_96_fns = self.ts_64_fns
 
             if self.ts_96 is not None:
-                self.ts_96 <= (self.ts_96_s << 48) | (self.ts_96_ns << 16) | self.ts_96_fns
+                self.ts_96.value = (self.ts_96_s << 48) | (self.ts_96_ns << 16) | self.ts_96_fns
 
             if self.ts_64 is not None:
-                self.ts_64 <= (self.ts_64_ns << 16) | self.ts_64_fns
+                self.ts_64.value = (self.ts_64_ns << 16) | self.ts_64_fns
 
             if self.pps is not None:
-                self.pps <= int(self.last_ts_96_s != self.ts_96_s)
+                self.pps.value = int(self.last_ts_96_s != self.ts_96_s)
 
             self.last_ts_96_s = self.ts_96_s

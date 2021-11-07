@@ -140,8 +140,8 @@ class RgmiiSource(Reset):
                 self._run_cr = None
 
             self.active = False
-            self.data <= 0
-            self.ctrl <= 0
+            self.data.value = 0
+            self.ctrl.value = 0
 
             if self.current_frame:
                 self.log.warning("Flushed transmit frame during reset: %s", self.current_frame)
@@ -170,8 +170,8 @@ class RgmiiSource(Reset):
             await RisingEdge(self.clock)
 
             # send high nibble after rising edge, leading in to falling edge
-            self.data <= d >> 4
-            self.ctrl <= en ^ er
+            self.data.value = d >> 4
+            self.ctrl.value = en ^ er
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt > 0:
@@ -235,8 +235,8 @@ class RgmiiSource(Reset):
             await FallingEdge(self.clock)
 
             # send low nibble after falling edge, leading in to rising edge
-            self.data <= d & 0x0F
-            self.ctrl <= en
+            self.data.value = d & 0x0F
+            self.ctrl.value = en
 
 
 class RgmiiSink(Reset):
@@ -448,6 +448,6 @@ class RgmiiPhy:
 
         while True:
             await t
-            self.rx_clk <= 1
+            self.rx_clk.value = 1
             await t
-            self.rx_clk <= 0
+            self.rx_clk.value = 0

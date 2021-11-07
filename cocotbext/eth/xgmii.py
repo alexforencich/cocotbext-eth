@@ -250,8 +250,8 @@ class XgmiiSource(Reset):
                 self._run_cr = None
 
             self.active = False
-            self.data <= 0
-            self.ctrl <= 0
+            self.data.value = 0
+            self.ctrl.value = 0
 
             if self.current_frame:
                 self.log.warning("Flushed transmit frame during reset: %s", self.current_frame)
@@ -351,11 +351,11 @@ class XgmiiSource(Reset):
                             d_val |= XgmiiCtrl.IDLE << k*8
                             c_val |= 1 << k
 
-                    self.data <= d_val
-                    self.ctrl <= c_val
+                    self.data.value = d_val
+                    self.ctrl.value = c_val
                 else:
-                    self.data <= self.idle_d
-                    self.ctrl <= self.idle_c
+                    self.data.value = self.idle_d
+                    self.ctrl.value = self.idle_c
                     self.active = False
                     self.idle_event.set()
 

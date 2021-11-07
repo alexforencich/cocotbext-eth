@@ -140,10 +140,10 @@ class MiiSource(Reset):
                 self._run_cr = None
 
             self.active = False
-            self.data <= 0
+            self.data.value = 0
             if self.er is not None:
-                self.er <= 0
-            self.dv <= 0
+                self.er.value = 0
+            self.dv.value = 0
 
             if self.current_frame:
                 self.log.warning("Flushed transmit frame during reset: %s", self.current_frame)
@@ -202,10 +202,10 @@ class MiiSource(Reset):
                     d = frame_data[frame_offset]
                     if frame.sim_time_sfd is None and d == 0xD:
                         frame.sim_time_sfd = get_sim_time()
-                    self.data <= d
+                    self.data.value = d
                     if self.er is not None:
-                        self.er <= frame_error[frame_offset]
-                    self.dv <= 1
+                        self.er.value = frame_error[frame_offset]
+                    self.dv.value = 1
                     frame_offset += 1
 
                     if frame_offset >= len(frame_data):
@@ -215,10 +215,10 @@ class MiiSource(Reset):
                         frame = None
                         self.current_frame = None
                 else:
-                    self.data <= 0
+                    self.data.value = 0
                     if self.er is not None:
-                        self.er <= 0
-                    self.dv <= 0
+                        self.er.value = 0
+                    self.dv.value = 0
                     self.active = False
                     self.idle_event.set()
 
@@ -410,8 +410,8 @@ class MiiPhy:
 
         while True:
             await t
-            self.tx_clk <= 1
-            self.rx_clk <= 1
+            self.tx_clk.value = 1
+            self.rx_clk.value = 1
             await t
-            self.tx_clk <= 0
-            self.rx_clk <= 0
+            self.tx_clk.value = 0
+            self.rx_clk.value = 0

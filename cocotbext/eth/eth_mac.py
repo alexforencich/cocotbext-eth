@@ -253,7 +253,7 @@ class EthMacTx(Reset):
                 self._run_ts_cr = None
 
             if self.ptp_ts_valid:
-                self.ptp_ts_valid <= 0
+                self.ptp_ts_valid.value = 0
 
             self.active = False
 
@@ -324,14 +324,14 @@ class EthMacTx(Reset):
     async def _run_ts(self):
         while True:
             await RisingEdge(self.clock)
-            self.ptp_ts_valid <= 0
+            self.ptp_ts_valid.value = 0
 
             if not self.ts_queue.empty():
                 ts, tag = self.ts_queue.get_nowait()
-                self.ptp_ts <= ts
+                self.ptp_ts.value = ts
                 if self.ptp_ts_tag is not None:
-                    self.ptp_ts_tag <= tag
-                self.ptp_ts_valid <= 1
+                    self.ptp_ts_tag.value = tag
+                self.ptp_ts_valid.value = 1
 
 
 class EthMacRx(Reset):
