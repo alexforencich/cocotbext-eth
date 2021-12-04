@@ -166,8 +166,11 @@ class RgmiiSource(Reset):
         er = 0
         en = 0
 
+        clock_rising_edge_event = RisingEdge(self.clock)
+        clock_falling_edge_event = FallingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_rising_edge_event
 
             # send high nibble after rising edge, leading in to falling edge
             self.data.value = d >> 4
@@ -232,11 +235,11 @@ class RgmiiSource(Reset):
                     self.active = False
                     self.idle_event.set()
 
-            await FallingEdge(self.clock)
+                await clock_falling_edge_event
 
-            # send low nibble after falling edge, leading in to rising edge
-            self.data.value = d & 0x0F
-            self.ctrl.value = en
+                # send low nibble after falling edge, leading in to rising edge
+                self.data.value = d & 0x0F
+                self.ctrl.value = en
 
 
 class RgmiiSink(Reset):
@@ -339,20 +342,23 @@ class RgmiiSink(Reset):
         dv_val = 0
         er_val = 0
 
+        clock_rising_edge_event = RisingEdge(self.clock)
+        clock_falling_edge_event = FallingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
-
-            # capture low nibble on rising edge
-            d_val = self.data.value.integer
-            dv_val = self.ctrl.value.integer
-
-            await FallingEdge(self.clock)
-
-            # capture high nibble on falling edge
-            d_val |= self.data.value.integer << 4
-            er_val = dv_val ^ self.ctrl.value.integer
+            await clock_rising_edge_event
 
             if self.enable is None or self.enable.value:
+
+                # capture low nibble on rising edge
+                d_val = self.data.value.integer
+                dv_val = self.ctrl.value.integer
+
+                await clock_falling_edge_event
+
+                # capture high nibble on falling edge
+                d_val |= self.data.value.integer << 4
+                er_val = dv_val ^ self.ctrl.value.integer
 
                 if frame is None:
                     if dv_val:

@@ -272,8 +272,10 @@ class XgmiiSource(Reset):
         deficit_idle_cnt = 0
         self.active = False
 
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt + deficit_idle_cnt > self.byte_lanes-1 or (not self.enable_dic and ifg_cnt > 4):
@@ -456,8 +458,10 @@ class XgmiiSink(Reset):
         frame = None
         self.active = False
 
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             if self.enable is None or self.enable.value:
                 for offset in range(self.byte_lanes):

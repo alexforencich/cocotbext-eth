@@ -322,8 +322,10 @@ class EthMacTx(Reset):
             await Timer(self.time_scale*self.ifg*8//self.speed, 'step')
 
     async def _run_ts(self):
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
             self.ptp_ts_valid.value = 0
 
             if not self.ts_queue.empty():

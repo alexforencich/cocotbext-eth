@@ -82,9 +82,11 @@ class TB:
         self.set_enable_generator(None)
 
     async def _run_enable(self):
+        clock_edge_event = RisingEdge(self.dut.clk)
+
         for val in self._enable_generator:
             self.dut.gmii_clk_en <= val
-            await RisingEdge(self.dut.clk)
+            await clock_edge_event
 
 
 async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_gen=None, mii_sel=False):

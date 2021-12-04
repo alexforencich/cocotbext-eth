@@ -208,8 +208,10 @@ class PtpClock(Reset):
                 self._run_cr = cocotb.fork(self._run())
 
     async def _run(self):
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             if self.ts_step is not None:
                 self.ts_step.value = self.ts_updated
@@ -309,8 +311,10 @@ class PtpClockSimTime:
         return self.get_ts_64()*1e-9
 
     async def _run(self):
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             self.ts_64_fns, self.ts_64_ns = math.modf(get_sim_time('ns'))
 

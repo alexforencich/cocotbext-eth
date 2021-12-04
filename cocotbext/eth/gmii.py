@@ -264,8 +264,10 @@ class GmiiSource(Reset):
         ifg_cnt = 0
         self.active = False
 
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             if self.enable is None or self.enable.value:
                 if ifg_cnt > 0:
@@ -428,8 +430,10 @@ class GmiiSink(Reset):
         frame = None
         self.active = False
 
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             if self.enable is None or self.enable.value:
                 d_val = self.data.value.integer
