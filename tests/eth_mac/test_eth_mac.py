@@ -45,8 +45,8 @@ class TB:
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.tx_clk, 6.4, units="ns").start())
-        cocotb.fork(Clock(dut.rx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.tx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.rx_clk, 6.4, units="ns").start())
 
         self.mac = EthMac(
             tx_clk=dut.tx_clk,

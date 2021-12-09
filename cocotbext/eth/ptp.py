@@ -205,7 +205,7 @@ class PtpClock(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.start_soon(self._run())
 
     async def _run(self):
         clock_edge_event = RisingEdge(self.clock)
@@ -290,7 +290,7 @@ class PtpClockSimTime:
         if self.pps is not None:
             self.pps.value = 0
 
-        self._run_cr = cocotb.fork(self._run())
+        self._run_cr = cocotb.start_soon(self._run())
 
     def get_ts_96(self):
         return (self.ts_96_s << 48) | (self.ts_96_ns << 16) | self.ts_96_fns

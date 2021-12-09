@@ -262,9 +262,9 @@ class EthMacTx(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.start_soon(self._run())
             if self._run_ts_cr is None and self.ptp_ts:
-                self._run_ts_cr = cocotb.fork(self._run_ts())
+                self._run_ts_cr = cocotb.start_soon(self._run_ts())
 
     async def _run(self):
         frame = None
@@ -477,7 +477,7 @@ class EthMacRx(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.start_soon(self._run())
 
     async def _run(self):
         frame = None

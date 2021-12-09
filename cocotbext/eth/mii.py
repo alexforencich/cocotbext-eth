@@ -155,7 +155,7 @@ class MiiSource(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.start_soon(self._run())
 
     async def _run(self):
         frame = None
@@ -315,7 +315,7 @@ class MiiSink(Reset):
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
-                self._run_cr = cocotb.fork(self._run())
+                self._run_cr = cocotb.start_soon(self._run())
 
     async def _run(self):
         frame = None
@@ -406,7 +406,7 @@ class MiiPhy:
         if self._clock_cr is not None:
             self._clock_cr.kill()
 
-        self._clock_cr = cocotb.fork(self._run_clocks(4*1e9/self.speed))
+        self._clock_cr = cocotb.start_soon(self._run_clocks(4*1e9/self.speed))
 
     async def _run_clocks(self, period):
         half_period = get_sim_steps(period / 2.0, 'ns')

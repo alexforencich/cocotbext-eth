@@ -44,7 +44,7 @@ class TB:
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.phy_gtx_clk, 8, units="ns").start())
+        cocotb.start_soon(Clock(dut.phy_gtx_clk, 8, units="ns").start())
 
         self.gmii_phy = GmiiPhy(dut.phy_txd, dut.phy_tx_er, dut.phy_tx_en, dut.phy_tx_clk, dut.phy_gtx_clk,
             dut.phy_rxd, dut.phy_rx_er, dut.phy_rx_dv, dut.phy_rx_clk, dut.phy_rst, speed=speed)

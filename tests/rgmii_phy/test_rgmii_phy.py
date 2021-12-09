@@ -45,11 +45,11 @@ class TB:
         self.log.setLevel(logging.DEBUG)
 
         if speed == 1000e6:
-            cocotb.fork(Clock(dut.phy_tx_clk, 8, units="ns").start())
+            cocotb.start_soon(Clock(dut.phy_tx_clk, 8, units="ns").start())
         elif speed == 100e6:
-            cocotb.fork(Clock(dut.phy_tx_clk, 40, units="ns").start())
+            cocotb.start_soon(Clock(dut.phy_tx_clk, 40, units="ns").start())
         elif speed == 10e6:
-            cocotb.fork(Clock(dut.phy_tx_clk, 400, units="ns").start())
+            cocotb.start_soon(Clock(dut.phy_tx_clk, 400, units="ns").start())
 
         self.rgmii_phy = RgmiiPhy(dut.phy_txd, dut.phy_tx_ctl, dut.phy_tx_clk,
             dut.phy_rxd, dut.phy_rx_ctl, dut.phy_rx_clk, dut.phy_rst, speed=speed)

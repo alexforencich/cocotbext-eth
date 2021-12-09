@@ -48,7 +48,7 @@ class TB:
         self._enable_generator = None
         self._enable_cr = None
 
-        cocotb.fork(Clock(dut.clk, 2, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk, 2, units="ns").start())
 
         self.source = XgmiiSource(dut.xgmii_d, dut.xgmii_c, dut.clk, dut.rst, dut.xgmii_clk_en)
         self.sink = XgmiiSink(dut.xgmii_d, dut.xgmii_c, dut.clk, dut.rst, dut.xgmii_clk_en)
@@ -74,7 +74,7 @@ class TB:
         self._enable_generator = generator
 
         if self._enable_generator is not None:
-            self._enable_cr = cocotb.fork(self._run_enable())
+            self._enable_cr = cocotb.start_soon(self._run_enable())
 
     def clear_enable_generator(self):
         self.set_enable_generator(None)
