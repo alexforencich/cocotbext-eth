@@ -169,7 +169,17 @@ class RgmiiSource(Reset):
         clock_rising_edge_event = RisingEdge(self.clock)
         clock_falling_edge_event = FallingEdge(self.clock)
 
+        enable_event = None
+        if self.enable is not None:
+            enable_event = RisingEdge(self.enable)
+
         while True:
+            await clock_falling_edge_event
+
+            # send low nibble after falling edge, leading in to rising edge
+            self.data.value = d & 0x0F
+            self.ctrl.value = en
+
             await clock_rising_edge_event
 
             # send high nibble after rising edge, leading in to falling edge
@@ -235,11 +245,8 @@ class RgmiiSource(Reset):
                     self.active = False
                     self.idle_event.set()
 
-                await clock_falling_edge_event
-
-                # send low nibble after falling edge, leading in to rising edge
-                self.data.value = d & 0x0F
-                self.ctrl.value = en
+            elif self.enable is not None and not self.enable.value:
+                await enable_event
 
 
 class RgmiiSink(Reset):
@@ -345,6 +352,10 @@ class RgmiiSink(Reset):
         clock_rising_edge_event = RisingEdge(self.clock)
         clock_falling_edge_event = FallingEdge(self.clock)
 
+        enable_event = None
+        if self.enable is not None:
+            enable_event = RisingEdge(self.enable)
+
         while True:
             await clock_rising_edge_event
 
@@ -411,6 +422,9 @@ class RgmiiSink(Reset):
 
                     frame.data.append(d_val)
                     frame.error.append(er_val)
+
+            elif self.enable is not None and not self.enable.value:
+                await enable_event
 
 
 class RgmiiPhy:

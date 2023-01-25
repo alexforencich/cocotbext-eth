@@ -167,6 +167,10 @@ class MiiSource(Reset):
 
         clock_edge_event = RisingEdge(self.clock)
 
+        enable_event = None
+        if self.enable is not None:
+            enable_event = RisingEdge(self.enable)
+
         while True:
             await clock_edge_event
 
@@ -223,6 +227,9 @@ class MiiSource(Reset):
                     self.dv.value = 0
                     self.active = False
                     self.idle_event.set()
+
+            elif self.enable is not None and not self.enable.value:
+                await enable_event
 
 
 class MiiSink(Reset):
@@ -323,6 +330,10 @@ class MiiSink(Reset):
 
         clock_edge_event = RisingEdge(self.clock)
 
+        enable_event = None
+        if self.enable is not None:
+            enable_event = RisingEdge(self.enable)
+
         while True:
             await clock_edge_event
 
@@ -377,6 +388,9 @@ class MiiSink(Reset):
 
                     frame.data.append(d_val)
                     frame.error.append(er_val)
+
+            elif self.enable is not None and not self.enable.value:
+                await enable_event
 
 
 class MiiPhy:

@@ -274,6 +274,10 @@ class XgmiiSource(Reset):
 
         clock_edge_event = RisingEdge(self.clock)
 
+        enable_event = None
+        if self.enable is not None:
+            enable_event = RisingEdge(self.enable)
+
         while True:
             await clock_edge_event
 
@@ -360,6 +364,9 @@ class XgmiiSource(Reset):
                     self.ctrl.value = self.idle_c
                     self.active = False
                     self.idle_event.set()
+
+            elif self.enable is not None and not self.enable.value:
+                await enable_event
 
 
 class XgmiiSink(Reset):
@@ -460,6 +467,10 @@ class XgmiiSink(Reset):
 
         clock_edge_event = RisingEdge(self.clock)
 
+        enable_event = None
+        if self.enable is not None:
+            enable_event = RisingEdge(self.enable)
+
         while True:
             await clock_edge_event
 
@@ -499,3 +510,6 @@ class XgmiiSink(Reset):
 
                             frame.data.append(d_val)
                             frame.ctrl.append(c_val)
+
+            elif self.enable is not None and not self.enable.value:
+                await enable_event
