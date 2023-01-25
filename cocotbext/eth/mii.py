@@ -59,6 +59,7 @@ class MiiSource(Reset):
         self.current_frame = None
         self.idle_event = Event()
         self.idle_event.set()
+        self.active_event = Event()
 
         self.ifg = 12
 
@@ -90,6 +91,7 @@ class MiiSource(Reset):
         frame = GmiiFrame(frame)
         await self.queue.put(frame)
         self.idle_event.clear()
+        self.active_event.set()
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
 
@@ -99,6 +101,7 @@ class MiiSource(Reset):
         frame = GmiiFrame(frame)
         self.queue.put_nowait(frame)
         self.idle_event.clear()
+        self.active_event.set()
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
 
@@ -126,6 +129,7 @@ class MiiSource(Reset):
             frame.handle_tx_complete()
         self.dequeue_event.set()
         self.idle_event.set()
+        self.active_event.clear()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
@@ -152,6 +156,7 @@ class MiiSource(Reset):
 
             if self.queue.empty():
                 self.idle_event.set()
+                self.active_event.clear()
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
@@ -226,7 +231,11 @@ class MiiSource(Reset):
                         self.er.value = 0
                     self.dv.value = 0
                     self.active = False
-                    self.idle_event.set()
+
+                    if ifg_cnt == 0 and self.queue.empty():
+                        self.idle_event.set()
+                        self.active_event.clear()
+                        await self.active_event.wait()
 
             elif self.enable is not None and not self.enable.value:
                 await enable_event
@@ -330,6 +339,8 @@ class MiiSink(Reset):
 
         clock_edge_event = RisingEdge(self.clock)
 
+        active_event = RisingEdge(self.dv)
+
         enable_event = None
         if self.enable is not None:
             enable_event = RisingEdge(self.enable)
@@ -388,6 +399,9 @@ class MiiSink(Reset):
 
                     frame.data.append(d_val)
                     frame.error.append(er_val)
+
+                if not dv_val:
+                    await active_event
 
             elif self.enable is not None and not self.enable.value:
                 await enable_event

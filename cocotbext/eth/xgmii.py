@@ -28,7 +28,7 @@ import zlib
 
 import cocotb
 from cocotb.queue import Queue, QueueFull
-from cocotb.triggers import RisingEdge, Timer, First, Event
+from cocotb.triggers import Edge, RisingEdge, Timer, First, Event
 from cocotb.utils import get_sim_time
 
 from .version import __version__
@@ -158,6 +158,7 @@ class XgmiiSource(Reset):
         self.current_frame = None
         self.idle_event = Event()
         self.idle_event.set()
+        self.active_event = Event()
 
         self.enable_dic = True
         self.ifg = 12
@@ -200,6 +201,7 @@ class XgmiiSource(Reset):
         frame = XgmiiFrame(frame)
         await self.queue.put(frame)
         self.idle_event.clear()
+        self.active_event.set()
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
 
@@ -209,6 +211,7 @@ class XgmiiSource(Reset):
         frame = XgmiiFrame(frame)
         self.queue.put_nowait(frame)
         self.idle_event.clear()
+        self.active_event.set()
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
 
@@ -236,6 +239,7 @@ class XgmiiSource(Reset):
             frame.handle_tx_complete()
         self.dequeue_event.set()
         self.idle_event.set()
+        self.active_event.clear()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
@@ -260,6 +264,7 @@ class XgmiiSource(Reset):
 
             if self.queue.empty():
                 self.idle_event.set()
+                self.active_event.clear()
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
@@ -363,7 +368,11 @@ class XgmiiSource(Reset):
                     self.data.value = self.idle_d
                     self.ctrl.value = self.idle_c
                     self.active = False
-                    self.idle_event.set()
+
+                    if ifg_cnt == 0 and self.queue.empty():
+                        self.idle_event.set()
+                        self.active_event.clear()
+                        await self.active_event.wait()
 
             elif self.enable is not None and not self.enable.value:
                 await enable_event
@@ -467,17 +476,24 @@ class XgmiiSink(Reset):
 
         clock_edge_event = RisingEdge(self.clock)
 
+        active_event = First(Edge(self.data), Edge(self.ctrl))
+
         enable_event = None
         if self.enable is not None:
             enable_event = RisingEdge(self.enable)
+
+        idle_d = sum([XgmiiCtrl.IDLE << n*8 for n in range(self.byte_lanes)])
+        idle_c = 2**self.byte_lanes-1
 
         while True:
             await clock_edge_event
 
             if self.enable is None or self.enable.value:
+                data_val = self.data.value.integer
+                ctrl_val = self.ctrl.value.integer
                 for offset in range(self.byte_lanes):
-                    d_val = (self.data.value.integer >> (offset*8)) & 0xff
-                    c_val = (self.ctrl.value.integer >> offset) & 1
+                    d_val = (data_val >> (offset*8)) & 0xff
+                    c_val = (ctrl_val >> offset) & 1
 
                     if frame is None:
                         if c_val and d_val == XgmiiCtrl.START:
@@ -510,6 +526,9 @@ class XgmiiSink(Reset):
 
                             frame.data.append(d_val)
                             frame.ctrl.append(c_val)
+
+                if data_val == idle_d and ctrl_val == idle_c:
+                    await active_event
 
             elif self.enable is not None and not self.enable.value:
                 await enable_event

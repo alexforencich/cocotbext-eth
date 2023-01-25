@@ -61,6 +61,7 @@ class RgmiiSource(Reset):
         self.current_frame = None
         self.idle_event = Event()
         self.idle_event.set()
+        self.active_event = Event()
 
         self.ifg = 12
         self.mii_mode = False
@@ -90,6 +91,7 @@ class RgmiiSource(Reset):
         frame = GmiiFrame(frame)
         await self.queue.put(frame)
         self.idle_event.clear()
+        self.active_event.set()
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
 
@@ -99,6 +101,7 @@ class RgmiiSource(Reset):
         frame = GmiiFrame(frame)
         self.queue.put_nowait(frame)
         self.idle_event.clear()
+        self.active_event.set()
         self.queue_occupancy_bytes += len(frame)
         self.queue_occupancy_frames += 1
 
@@ -126,6 +129,7 @@ class RgmiiSource(Reset):
             frame.handle_tx_complete()
         self.dequeue_event.set()
         self.idle_event.set()
+        self.active_event.clear()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
@@ -150,6 +154,7 @@ class RgmiiSource(Reset):
 
             if self.queue.empty():
                 self.idle_event.set()
+                self.active_event.clear()
         else:
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
@@ -161,6 +166,7 @@ class RgmiiSource(Reset):
         frame_data = None
         frame_error = None
         ifg_cnt = 0
+        in_ifg = False
         self.active = False
         d = 0
         er = 0
@@ -187,9 +193,12 @@ class RgmiiSource(Reset):
             self.ctrl.value = en ^ er
 
             if self.enable is None or self.enable.value:
+                in_ifg = False
+
                 if ifg_cnt > 0:
                     # in IFG
                     ifg_cnt -= 1
+                    in_ifg = True
 
                 elif frame is None and not self.queue.empty():
                     # send frame
@@ -234,6 +243,7 @@ class RgmiiSource(Reset):
 
                     if frame_offset >= len(frame_data):
                         ifg_cnt = max(self.ifg, 1)
+                        in_ifg = True
                         frame.sim_time_end = get_sim_time()
                         frame.handle_tx_complete()
                         frame = None
@@ -243,7 +253,11 @@ class RgmiiSource(Reset):
                     er = 0
                     en = 0
                     self.active = False
-                    self.idle_event.set()
+
+                    if not in_ifg and self.queue.empty():
+                        self.idle_event.set()
+                        self.active_event.clear()
+                        await self.active_event.wait()
 
             elif self.enable is not None and not self.enable.value:
                 await enable_event
@@ -352,6 +366,8 @@ class RgmiiSink(Reset):
         clock_rising_edge_event = RisingEdge(self.clock)
         clock_falling_edge_event = FallingEdge(self.clock)
 
+        active_event = RisingEdge(self.ctrl)
+
         enable_event = None
         if self.enable is not None:
             enable_event = RisingEdge(self.enable)
@@ -422,6 +438,9 @@ class RgmiiSink(Reset):
 
                     frame.data.append(d_val)
                     frame.error.append(er_val)
+
+                if not dv_val:
+                    await active_event
 
             elif self.enable is not None and not self.enable.value:
                 await enable_event
