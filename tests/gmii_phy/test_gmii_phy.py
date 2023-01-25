@@ -64,10 +64,10 @@ class TB:
         self.dut.phy_rst.setimmediatevalue(0)
         await RisingEdge(self.dut.phy_tx_clk)
         await RisingEdge(self.dut.phy_tx_clk)
-        self.dut.phy_rst <= 1
+        self.dut.phy_rst.value = 1
         await RisingEdge(self.dut.phy_tx_clk)
         await RisingEdge(self.dut.phy_tx_clk)
-        self.dut.phy_rst <= 0
+        self.dut.phy_rst.value = 0
         await RisingEdge(self.dut.phy_tx_clk)
         await RisingEdge(self.dut.phy_tx_clk)
 

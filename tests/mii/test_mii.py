@@ -60,10 +60,10 @@ class TB:
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -84,7 +84,7 @@ class TB:
         clock_edge_event = RisingEdge(self.dut.clk)
 
         for val in self._enable_generator:
-            self.dut.mii_clk_en <= val
+            self.dut.mii_clk_en.value = val
             await clock_edge_event
 
 

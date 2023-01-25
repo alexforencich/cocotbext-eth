@@ -59,10 +59,10 @@ class TB:
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -83,7 +83,7 @@ class TB:
         clock_edge_event = RisingEdge(self.dut.clk)
 
         for val in self._enable_generator:
-            self.dut.rgmii_clk_en <= val
+            self.dut.rgmii_clk_en.value = val
             await clock_edge_event
 
 
@@ -92,7 +92,7 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
     tb = TB(dut)
 
     tb.source.ifg = ifg
-    tb.dut.rgmii_mii_sel <= mii_sel
+    tb.dut.rgmii_mii_sel.value = mii_sel
 
     if enable_gen is not None:
         tb.set_enable_generator(enable_gen())
