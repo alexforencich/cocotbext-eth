@@ -43,8 +43,8 @@ AxiStreamBus, AxiStreamTransaction, AxiStreamSource, AxiStreamSink, AxiStreamMon
 
 
 class EthMacFrame:
-    def __init__(self, data=None, tx_complete=None):
-        self.data = bytearray()
+    def __init__(self, data=b'', tx_complete=None):
+        self.data = b''
         self.sim_time_start = None
         self.sim_time_sfd = None
         self.sim_time_end = None
@@ -53,7 +53,7 @@ class EthMacFrame:
         self.tx_complete = None
 
         if type(data) is EthMacFrame:
-            self.data = bytearray(data.data)
+            self.data = bytes(data.data)
             self.sim_time_start = data.sim_time_start
             self.sim_time_sfd = data.sim_time_sfd
             self.sim_time_end = data.sim_time_end
@@ -61,7 +61,7 @@ class EthMacFrame:
             self.ptp_tag = data.ptp_tag
             self.tx_complete = data.tx_complete
         else:
-            self.data = bytearray(data)
+            self.data = bytes(data)
 
         if tx_complete is not None:
             self.tx_complete = tx_complete
@@ -274,7 +274,9 @@ class EthMacTx(Reset):
             # wait for data
             cycle = await self.stream.recv()
 
-            frame = EthMacFrame(bytearray())
+            frame = EthMacFrame()
+            data = bytearray()
+
             frame.sim_time_start = get_sim_time()
 
             # wait for preamble time
@@ -293,13 +295,14 @@ class EthMacTx(Reset):
 
                 for offset in range(self.byte_lanes):
                     if not hasattr(self.bus, "tkeep") or (cycle.tkeep.integer >> offset) & 1:
-                        frame.data.append((cycle.tdata.integer >> (offset * self.byte_size)) & self.byte_mask)
+                        data.append((cycle.tdata.integer >> (offset * self.byte_size)) & self.byte_mask)
                         byte_count += 1
 
                 # wait for serialization time
                 await Timer(self.time_scale*byte_count*8//self.speed, 'step')
 
                 if cycle.tlast.integer:
+                    frame.data = bytes(data)
                     frame.sim_time_end = get_sim_time()
                     self.log.info("RX frame: %s", frame)
 
