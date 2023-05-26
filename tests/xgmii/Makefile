@@ -32,8 +32,8 @@ MODULE   = $(DUT)
 VERILOG_SOURCES += $(DUT).v
 
 # module parameters
-export PARAM_DATA_WIDTH ?= 64
-export PARAM_CTRL_WIDTH ?= $(shell expr $(PARAM_DATA_WIDTH) / 8 )
+export PARAM_DATA_WIDTH := 64
+export PARAM_CTRL_WIDTH := $(shell expr $(PARAM_DATA_WIDTH) / 8 )
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
