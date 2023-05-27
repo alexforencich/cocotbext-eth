@@ -133,7 +133,10 @@ class EthMacTx(Reset):
         self.ptp_ts_valid = ptp_ts_valid
         self.ifg = ifg
         self.speed = speed
-        self.log = logging.getLogger(f"cocotb.{bus._entity._name}.{bus._name}")
+        if bus._name:
+            self.log = logging.getLogger(f"cocotb.{bus._entity._name}.{bus._name}")
+        else:
+            self.log = logging.getLogger(f"cocotb.{bus._entity._name}")
 
         self.log.info("Ethernet MAC TX model")
         self.log.info("cocotbext-eth version %s", __version__)
@@ -349,7 +352,10 @@ class EthMacRx(Reset):
         self.ptp_time = ptp_time
         self.ifg = ifg
         self.speed = speed
-        self.log = logging.getLogger(f"cocotb.{bus._entity._name}.{bus._name}")
+        if bus._name:
+            self.log = logging.getLogger(f"cocotb.{bus._entity._name}.{bus._name}")
+        else:
+            self.log = logging.getLogger(f"cocotb.{bus._entity._name}")
 
         self.log.info("Ethernet MAC RX model")
         self.log.info("cocotbext-eth version %s", __version__)
