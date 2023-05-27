@@ -29,29 +29,37 @@ THE SOFTWARE.
 /*
  * Ethernet MAC model test
  */
-module test_eth_mac
+module test_eth_mac #
 (
-    inout  wire        tx_clk,
-    inout  wire        tx_rst,
-    inout  wire [63:0] tx_axis_tdata,
-    inout  wire [7:0]  tx_axis_tkeep,
-    inout  wire        tx_axis_tlast,
-    inout  wire [16:0] tx_axis_tuser,
-    inout  wire        tx_axis_tvalid,
-    inout  wire        tx_axis_tready,
-    inout  wire [95:0] tx_ptp_time,
-    inout  wire [95:0] tx_ptp_ts,
-    inout  wire [15:0] tx_ptp_ts_tag,
-    inout  wire        tx_ptp_ts_valid,
+    parameter PTP_TS_WIDTH = 96,
+    parameter PTP_TAG_WIDTH = 16,
+    parameter AXIS_DATA_WIDTH = 64,
+    parameter AXIS_KEEP_WIDTH = (AXIS_DATA_WIDTH/8),
+    parameter AXIS_TX_USER_WIDTH = PTP_TAG_WIDTH+1,
+    parameter AXIS_RX_USER_WIDTH = PTP_TS_WIDTH+1
+)
+(
+    inout  wire                           tx_clk,
+    inout  wire                           tx_rst,
+    inout  wire [AXIS_DATA_WIDTH-1:0]     tx_axis_tdata,
+    inout  wire [AXIS_KEEP_WIDTH-1:0]     tx_axis_tkeep,
+    inout  wire                           tx_axis_tlast,
+    inout  wire [AXIS_TX_USER_WIDTH-1:0]  tx_axis_tuser,
+    inout  wire                           tx_axis_tvalid,
+    inout  wire                           tx_axis_tready,
+    inout  wire [PTP_TS_WIDTH-1:0]        tx_ptp_time,
+    inout  wire [PTP_TS_WIDTH-1:0]        tx_ptp_ts,
+    inout  wire [PTP_TAG_WIDTH-1:0]       tx_ptp_ts_tag,
+    inout  wire                           tx_ptp_ts_valid,
 
-    inout  wire        rx_clk,
-    inout  wire        rx_rst,
-    inout  wire [63:0] rx_axis_tdata,
-    inout  wire [7:0]  rx_axis_tkeep,
-    inout  wire        rx_axis_tlast,
-    inout  wire [96:0] rx_axis_tuser,
-    inout  wire        rx_axis_tvalid,
-    inout  wire [95:0] rx_ptp_time
+    inout  wire                           rx_clk,
+    inout  wire                           rx_rst,
+    inout  wire [AXIS_DATA_WIDTH-1:0]     rx_axis_tdata,
+    inout  wire [AXIS_KEEP_WIDTH-1:0]     rx_axis_tkeep,
+    inout  wire                           rx_axis_tlast,
+    inout  wire [AXIS_RX_USER_WIDTH-1:0]  rx_axis_tuser,
+    inout  wire                           rx_axis_tvalid,
+    inout  wire [PTP_TS_WIDTH-1:0]        rx_ptp_time
 );
 
 endmodule

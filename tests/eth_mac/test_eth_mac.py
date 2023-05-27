@@ -28,6 +28,7 @@ import logging
 import os
 
 import cocotb_test.simulator
+import pytest
 
 import cocotb
 from cocotb.clock import Clock
@@ -45,8 +46,20 @@ class TB:
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.start_soon(Clock(dut.tx_clk, 6.4, units="ns").start())
-        cocotb.start_soon(Clock(dut.rx_clk, 6.4, units="ns").start())
+        if len(dut.tx_axis_tdata) == 8:
+            clk_period = 8
+        elif len(dut.tx_axis_tdata) == 32:
+            clk_period = 3.102
+        elif len(dut.tx_axis_tdata) == 64:
+            if speed == 25e9:
+                clk_period = 2.56
+            else:
+                clk_period = 6.206
+        elif len(dut.tx_axis_tdata) == 512:
+            clk_period = 3.102
+
+        cocotb.start_soon(Clock(dut.tx_clk, clk_period, units="ns").start())
+        cocotb.start_soon(Clock(dut.rx_clk, clk_period, units="ns").start())
 
         self.mac = EthMac(
             tx_clk=dut.tx_clk,
@@ -157,12 +170,21 @@ def incrementing_payload(length):
 
 if cocotb.SIM_NAME:
 
+    if len(cocotb.top.tx_axis_tdata) == 8:
+        speed = [100e6, 1e9]
+    elif len(cocotb.top.tx_axis_tdata) == 32:
+        speed = [10e9]
+    elif len(cocotb.top.tx_axis_tdata) == 64:
+        speed = [10e9, 25e9]
+    elif len(cocotb.top.tx_axis_tdata) == 512:
+        speed = [100e9]
+
     for test in [run_test_tx, run_test_rx]:
 
         factory = TestFactory(test)
         factory.add_option("payload_lengths", [size_list])
         factory.add_option("payload_data", [incrementing_payload])
-        factory.add_option("speed", [10e9, 1e9])
+        factory.add_option("speed", speed)
         factory.generate_tests()
 
 
@@ -171,7 +193,8 @@ if cocotb.SIM_NAME:
 tests_dir = os.path.dirname(__file__)
 
 
-def test_eth_mac(request):
+@pytest.mark.parametrize("data_width", [8, 32, 64, 512])
+def test_eth_mac(request, data_width):
     dut = "test_eth_mac"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -181,6 +204,13 @@ def test_eth_mac(request):
     ]
 
     parameters = {}
+
+    parameters['PTP_TS_WIDTH'] = 96
+    parameters['PTP_TAG_WIDTH'] = 16
+    parameters['AXIS_DATA_WIDTH'] = data_width
+    parameters['AXIS_KEEP_WIDTH'] = parameters['AXIS_DATA_WIDTH'] // 8
+    parameters['AXIS_TX_USER_WIDTH'] = parameters['PTP_TAG_WIDTH']+1
+    parameters['AXIS_RX_USER_WIDTH'] = parameters['PTP_TS_WIDTH']+1
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 
