@@ -632,7 +632,7 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 #### Methods
 
 * `set_period(ns, fns)`: set clock period from separate fields
-* `set_drift(ns, fns, rate)`: set clock drift from separate fields
+* `set_drift(num, denom)`: set clock drift from separate fields
 * `set_period_ns(t)`: set clock period in ns (float)
 * `get_period_ns()`: return current clock period in ns (float)
 * `set_ts_96(ts_s, ts_ns=None, ts_fns=None)`: set 96-bit timestamp from integer or from separate fields

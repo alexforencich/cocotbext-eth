@@ -252,9 +252,8 @@ async def run_drift_adjustment(dut):
 
     await tb.reset()
 
-    tb.ptp_clock.drift_ns = 0
-    tb.ptp_clock.drift_fns = 20
-    tb.ptp_clock.drift_rate = 5
+    tb.ptp_clock.drift_num = 20
+    tb.ptp_clock.drift_denom = 5
 
     await RisingEdge(dut.clk)
     start_time = get_sim_time('sec')

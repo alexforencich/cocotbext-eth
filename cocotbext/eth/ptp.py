@@ -58,9 +58,9 @@ class PtpClock(Reset):
 
         self.period_ns = 0
         self.period_fns = 0
-        self.drift_ns = 0
-        self.drift_fns = 0
-        self.drift_rate = 0
+        self.drift_num = 0
+        self.drift_denom = 0
+        self.drift_cnt = 0
         self.set_period_ns(period_ns)
 
         self.log.info("PTP clock")
@@ -79,8 +79,6 @@ class PtpClock(Reset):
 
         self.ts_updated = False
 
-        self.drift_cnt = 0
-
         if self.ts_96 is not None:
             self.ts_96.setimmediatevalue(0)
         if self.ts_64 is not None:
@@ -98,27 +96,23 @@ class PtpClock(Reset):
         self.period_ns = int(ns)
         self.period_fns = int(fns) & 0xffff
 
-    def set_drift(self, ns, fns, rate):
-        self.drift_ns = int(ns)
-        self.drift_fns = int(fns) & 0xffff
-        self.drift_rate = int(rate)
+    def set_drift(self, num, denom):
+        self.drift_num = int(num)
+        self.drift_denom = int(denom)
 
     def set_period_ns(self, t):
         drift, period = math.modf(t*2**16)
         period = int(period)
         frac = Fraction(drift).limit_denominator(2**16)
-        drift = frac.numerator
-        rate = frac.denominator
         self.period_ns = period >> 16
         self.period_fns = period & 0xffff
-        self.drift_ns = drift >> 16
-        self.drift_fns = drift & 0xffff
-        self.drift_rate = rate
+        self.drift_num = frac.numerator
+        self.drift_denom = frac.denominator
 
     def get_period_ns(self):
         p = ((self.period_ns << 16) | self.period_fns) / 2**16
-        if self.drift_rate:
-            return p + ((self.drift_ns << 16) | self.drift_fns) / self.drift_rate / 2**16
+        if self.drift_denom:
+            return p + self.drift_num / self.drift_rate / 2**16
         return p
 
     def set_ts_96(self, ts_s, ts_ns=None, ts_fns=None):
@@ -224,8 +218,8 @@ class PtpClock(Reset):
             if self.ts_96 is not None or self.pps is not None:
                 t = ((self.ts_96_ns << 16) + self.ts_96_fns) + ((self.period_ns << 16) + self.period_fns)
 
-                if self.drift_rate and self.drift_cnt == 0:
-                    t += (self.drift_ns << 16) + self.drift_fns
+                if self.drift_denom and self.drift_cnt == 0:
+                    t += self.drift_num
 
                 if t > (1000000000 << 16):
                     self.ts_96_s += 1
@@ -243,19 +237,19 @@ class PtpClock(Reset):
             if self.ts_64 is not None:
                 t = ((self.ts_64_ns << 16) + self.ts_64_fns) + ((self.period_ns << 16) + self.period_fns)
 
-                if self.drift_rate and self.drift_cnt == 0:
-                    t += ((self.drift_ns << 16) + self.drift_fns)
+                if self.drift_denom and self.drift_cnt == 0:
+                    t += self.drift_num
 
                 self.ts_64_fns = t & 0xffff
                 self.ts_64_ns = t >> 16
 
                 self.ts_64.value = (self.ts_64_ns << 16) | self.ts_64_fns
 
-            if self.drift_rate:
+            if self.drift_denom:
                 if self.drift_cnt > 0:
                     self.drift_cnt -= 1
                 else:
-                    self.drift_cnt = self.drift_rate-1
+                    self.drift_cnt = self.drift_denom-1
 
 
 class PtpClockSimTime:
