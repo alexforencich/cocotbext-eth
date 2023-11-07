@@ -25,6 +25,7 @@ THE SOFTWARE.
 
 import logging
 import os
+from decimal import Decimal
 
 import cocotb_test.simulator
 
@@ -66,6 +67,14 @@ class TB:
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
+    def get_ts_tod_ns(self):
+        ts = self.dut.ts_tod.value.integer
+        return Decimal(ts >> 48).scaleb(9) + (Decimal(ts & 0xffffffffffff) / Decimal(2**16))
+
+    def get_ts_rel_ns(self):
+        ts = self.dut.ts_rel.value.integer
+        return Decimal(ts) / Decimal(2**16)
+
 
 @cocotb.test()
 async def run_default_rate(dut):
@@ -75,32 +84,32 @@ async def run_default_rate(dut):
     await tb.reset()
 
     await RisingEdge(dut.clk)
-    start_time = get_sim_time('sec')
-    start_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    start_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    start_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    start_ts_tod = tb.get_ts_tod_ns()
+    start_ts_rel = tb.get_ts_rel_ns()
 
     await ClockCycles(dut.clk, 10000)
 
-    stop_time = get_sim_time('sec')
-    stop_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    stop_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    stop_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    stop_ts_tod = tb.get_ts_tod_ns()
+    stop_ts_rel = tb.get_ts_rel_ns()
 
     time_delta = stop_time-start_time
     ts_tod_delta = stop_ts_tod-start_ts_tod
     ts_rel_delta = stop_ts_rel-start_ts_rel
 
-    tb.log.info("sim time delta : %g s", time_delta)
-    tb.log.info("ToD ts delta   : %g s", ts_tod_delta)
-    tb.log.info("rel ts delta   : %g s", ts_rel_delta)
+    tb.log.info("sim time delta : %s ns", time_delta)
+    tb.log.info("ToD ts delta   : %s ns", ts_tod_delta)
+    tb.log.info("rel ts delta   : %s ns", ts_rel_delta)
 
     ts_tod_diff = time_delta - ts_tod_delta
     ts_rel_diff = time_delta - ts_rel_delta
 
-    tb.log.info("ToD ts diff    : %g s", ts_tod_diff)
-    tb.log.info("rel ts diff    : %g s", ts_rel_diff)
+    tb.log.info("ToD ts diff    : %s ns", ts_tod_diff)
+    tb.log.info("rel ts diff    : %s ns", ts_rel_diff)
 
-    assert abs(ts_tod_diff) < 1e-12
-    assert abs(ts_rel_diff) < 1e-12
+    assert abs(ts_tod_diff) < 1e-3
+    assert abs(ts_rel_diff) < 1e-3
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -118,36 +127,36 @@ async def run_load_timestamps(dut):
 
     await RisingEdge(dut.clk)
 
-    assert dut.ts_tod.value.integer == 12345678*2**16 + (tb.ptp_clock.period_ns << 16) + tb.ptp_clock.period_fns
-    assert dut.ts_rel.value.integer == 12345678*2**16 + (tb.ptp_clock.period_ns << 16) + tb.ptp_clock.period_fns
+    assert dut.ts_tod.value.integer == (12345678 << 16) + (tb.ptp_clock.period_ns << 16) + (tb.ptp_clock.period_fns >> 16)
+    assert dut.ts_rel.value.integer == (12345678 << 16) + (tb.ptp_clock.period_ns << 16) + (tb.ptp_clock.period_fns >> 16)
     assert dut.ts_step.value.integer == 1
 
-    start_time = get_sim_time('sec')
-    start_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    start_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    start_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    start_ts_tod = tb.get_ts_tod_ns()
+    start_ts_rel = tb.get_ts_rel_ns()
 
     await ClockCycles(dut.clk, 2000)
 
-    stop_time = get_sim_time('sec')
-    stop_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    stop_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    stop_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    stop_ts_tod = tb.get_ts_tod_ns()
+    stop_ts_rel = tb.get_ts_rel_ns()
 
     time_delta = stop_time-start_time
     ts_tod_delta = stop_ts_tod-start_ts_tod
     ts_rel_delta = stop_ts_rel-start_ts_rel
 
-    tb.log.info("sim time delta : %g s", time_delta)
-    tb.log.info("ToD ts delta   : %g s", ts_tod_delta)
-    tb.log.info("rel ts delta   : %g s", ts_rel_delta)
+    tb.log.info("sim time delta : %s ns", time_delta)
+    tb.log.info("ToD ts delta   : %s ns", ts_tod_delta)
+    tb.log.info("rel ts delta   : %s ns", ts_rel_delta)
 
     ts_tod_diff = time_delta - ts_tod_delta
     ts_rel_diff = time_delta - ts_rel_delta
 
-    tb.log.info("ToD ts diff    : %g s", ts_tod_diff)
-    tb.log.info("rel ts diff    : %g s", ts_rel_diff)
+    tb.log.info("ToD ts diff    : %s ns", ts_tod_diff)
+    tb.log.info("rel ts diff    : %s ns", ts_rel_diff)
 
-    assert abs(ts_tod_diff) < 1e-12
-    assert abs(ts_rel_diff) < 1e-12
+    assert abs(ts_tod_diff) < 1e-3
+    assert abs(ts_rel_diff) < 1e-3
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -166,9 +175,9 @@ async def run_seconds_increment(dut):
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
-    start_time = get_sim_time('sec')
-    start_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    start_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    start_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    start_ts_tod = tb.get_ts_tod_ns()
+    start_ts_rel = tb.get_ts_rel_ns()
 
     saw_pps = False
 
@@ -182,26 +191,26 @@ async def run_seconds_increment(dut):
 
     assert saw_pps
 
-    stop_time = get_sim_time('sec')
-    stop_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    stop_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    stop_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    stop_ts_tod = tb.get_ts_tod_ns()
+    stop_ts_rel = tb.get_ts_rel_ns()
 
     time_delta = stop_time-start_time
     ts_tod_delta = stop_ts_tod-start_ts_tod
     ts_rel_delta = stop_ts_rel-start_ts_rel
 
-    tb.log.info("sim time delta : %g s", time_delta)
-    tb.log.info("ToD ts delta   : %g s", ts_tod_delta)
-    tb.log.info("rel ts delta   : %g s", ts_rel_delta)
+    tb.log.info("sim time delta : %s ns", time_delta)
+    tb.log.info("ToD ts delta   : %s ns", ts_tod_delta)
+    tb.log.info("rel ts delta   : %s ns", ts_rel_delta)
 
     ts_tod_diff = time_delta - ts_tod_delta
     ts_rel_diff = time_delta - ts_rel_delta
 
-    tb.log.info("ToD ts diff    : %g s", ts_tod_diff)
-    tb.log.info("rel ts diff    : %g s", ts_rel_diff)
+    tb.log.info("ToD ts diff    : %s ns", ts_tod_diff)
+    tb.log.info("rel ts diff    : %s ns", ts_rel_diff)
 
-    assert abs(ts_tod_diff) < 1e-12
-    assert abs(ts_rel_diff) < 1e-12
+    assert abs(ts_tod_diff) < 1e-3
+    assert abs(ts_rel_diff) < 1e-3
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -214,36 +223,35 @@ async def run_frequency_adjustment(dut):
 
     await tb.reset()
 
-    tb.ptp_clock.period_ns = 0x6
-    tb.ptp_clock.period_fns = 0x6624
+    tb.ptp_clock.set_period(0x6, 0x66240000)
 
     await RisingEdge(dut.clk)
-    start_time = get_sim_time('sec')
-    start_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    start_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    start_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    start_ts_tod = tb.get_ts_tod_ns()
+    start_ts_rel = tb.get_ts_rel_ns()
 
     await ClockCycles(dut.clk, 10000)
 
-    stop_time = get_sim_time('sec')
-    stop_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    stop_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    stop_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    stop_ts_tod = tb.get_ts_tod_ns()
+    stop_ts_rel = tb.get_ts_rel_ns()
 
     time_delta = stop_time-start_time
     ts_tod_delta = stop_ts_tod-start_ts_tod
     ts_rel_delta = stop_ts_rel-start_ts_rel
 
-    tb.log.info("sim time delta : %g s", time_delta)
-    tb.log.info("ToD ts delta   : %g s", ts_tod_delta)
-    tb.log.info("rel ts delta   : %g s", ts_rel_delta)
+    tb.log.info("sim time delta : %s ns", time_delta)
+    tb.log.info("ToD ts delta   : %s ns", ts_tod_delta)
+    tb.log.info("rel ts delta   : %s ns", ts_rel_delta)
 
-    ts_tod_diff = time_delta - ts_tod_delta * 6.4/(6+(0x6624+2/5)/2**16)
-    ts_rel_diff = time_delta - ts_rel_delta * 6.4/(6+(0x6624+2/5)/2**16)
+    ts_tod_diff = time_delta - ts_tod_delta * Decimal(6.4)/tb.ptp_clock.get_period_ns()
+    ts_rel_diff = time_delta - ts_rel_delta * Decimal(6.4)/tb.ptp_clock.get_period_ns()
 
-    tb.log.info("ToD ts diff    : %g s", ts_tod_diff)
-    tb.log.info("rel ts diff    : %g s", ts_rel_diff)
+    tb.log.info("ToD ts diff    : %s ns", ts_tod_diff)
+    tb.log.info("rel ts diff    : %s ns", ts_rel_diff)
 
-    assert abs(ts_tod_diff) < 1e-12
-    assert abs(ts_rel_diff) < 1e-12
+    assert abs(ts_tod_diff) < 1e-3
+    assert abs(ts_rel_diff) < 1e-3
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -256,36 +264,35 @@ async def run_drift_adjustment(dut):
 
     await tb.reset()
 
-    tb.ptp_clock.drift_num = 20
-    tb.ptp_clock.drift_denom = 5
+    tb.ptp_clock.set_drift(20000, 5)
 
     await RisingEdge(dut.clk)
-    start_time = get_sim_time('sec')
-    start_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    start_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    start_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    start_ts_tod = tb.get_ts_tod_ns()
+    start_ts_rel = tb.get_ts_rel_ns()
 
     await ClockCycles(dut.clk, 10000)
 
-    stop_time = get_sim_time('sec')
-    stop_ts_tod = (dut.ts_tod.value.integer >> 48) + ((dut.ts_tod.value.integer & 0xffffffffffff)/2**16*1e-9)
-    stop_ts_rel = dut.ts_rel.value.integer/2**16*1e-9
+    stop_time = Decimal(get_sim_time('fs')).scaleb(-6)
+    stop_ts_tod = tb.get_ts_tod_ns()
+    stop_ts_rel = tb.get_ts_rel_ns()
 
     time_delta = stop_time-start_time
     ts_tod_delta = stop_ts_tod-start_ts_tod
     ts_rel_delta = stop_ts_rel-start_ts_rel
 
-    tb.log.info("sim time delta : %g s", time_delta)
-    tb.log.info("ToD ts delta   : %g s", ts_tod_delta)
-    tb.log.info("rel ts delta   : %g s", ts_rel_delta)
+    tb.log.info("sim time delta : %s ns", time_delta)
+    tb.log.info("ToD ts delta   : %s ns", ts_tod_delta)
+    tb.log.info("rel ts delta   : %s ns", ts_rel_delta)
 
-    ts_tod_diff = time_delta - ts_tod_delta * 6.4/(6+(0x6666+20/5)/2**16)
-    ts_rel_diff = time_delta - ts_rel_delta * 6.4/(6+(0x6666+20/5)/2**16)
+    ts_tod_diff = time_delta - ts_tod_delta * Decimal(6.4)/tb.ptp_clock.get_period_ns()
+    ts_rel_diff = time_delta - ts_rel_delta * Decimal(6.4)/tb.ptp_clock.get_period_ns()
 
-    tb.log.info("ToD ts diff    : %g s", ts_tod_diff)
-    tb.log.info("rel ts diff    : %g s", ts_rel_diff)
+    tb.log.info("ToD ts diff    : %s ns", ts_tod_diff)
+    tb.log.info("rel ts diff    : %s ns", ts_rel_diff)
 
-    assert abs(ts_tod_diff) < 1e-12
-    assert abs(ts_rel_diff) < 1e-12
+    assert abs(ts_tod_diff) < 1e-3
+    assert abs(ts_rel_diff) < 1e-3
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)

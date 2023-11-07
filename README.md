@@ -603,6 +603,10 @@ To use this module, import it and connect it to the DUT:
 
 Once the clock is instantiated, it will generate a continuous stream of monotonically increasing PTP timestamps on every clock edge.
 
+Internally, the `PtpClock` module uses 32-bit fractional ns fields for higher frequency resolution.  Only the upper 16 bits are returned in the timestamps, but the full fns value can be accessed with the _ts_tod_fns_ and _ts_rel_fns_ attributes.
+
+All APIs that handle fractional values use the `Decimal` type for maximum precision, as the combination of timestamp range and resolution is usually too much for normal floating point numbers to handle without significant loss of precision.
+
 #### Signals
 
 * `ts_tod`: 96-bit time-of-day timestamp (48 bit seconds, 32 bit ns, 16 bit fractional ns)
@@ -633,24 +637,26 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 
 * `set_period(ns, fns)`: set clock period from separate fields
 * `set_drift(num, denom)`: set clock drift from separate fields
-* `set_period_ns(t)`: set clock period in ns (float)
-* `get_period_ns()`: return current clock period in ns (float)
+* `set_period_ns(t)`: set clock period and drift in ns (Decimal)
+* `get_period_ns()`: return current clock period in ns (Decimal)
 * `set_ts_tod(ts_s, ts_ns, ts_fns)`: set 96-bit ToD timestamp from separate fields
 * `set_ts_tod_96(ts)`: set 96-bit ToD timestamp from integer
-* `set_ts_tod_ns(t)`: set 96-bit ToD timestamp from ns (float)
-* `set_ts_tod_s(t)`: set 96-bit ToD timestamp from seconds (float)
+* `set_ts_tod_ns(t)`: set 96-bit ToD timestamp from ns (Decimal)
+* `set_ts_tod_s(t)`: set 96-bit ToD timestamp from seconds (Decimal)
+* `set_ts_tod_sim_time()`: set 96-bit ToD timestamp from sim time
 * `get_ts_tod()`: return current 96-bit ToD timestamp as separate fields
 * `get_ts_tod_96()`: return current 96-bit ToD timestamp as an integer
-* `get_ts_tod_ns()`: return current 96-bit ToD timestamp in ns (float)
-* `get_ts_tod_s()`: return current 96-bit ToD timestamp in seconds (float)
+* `get_ts_tod_ns()`: return current 96-bit ToD timestamp in ns (Decimal)
+* `get_ts_tod_s()`: return current 96-bit ToD timestamp in seconds (Decimal)
 * `set_ts_rel(ts_ns, ts_fns)`: set 64-bit relative timestamp from separate fields
 * `set_ts_rel_64(ts)`: set 64-bit relative timestamp from integer
-* `set_ts_rel_ns(t)`: set 64-bit relative timestamp from ns (float)
-* `set_ts_rel_s(t)`: set 64-bit relative timestamp from seconds (float)
+* `set_ts_rel_ns(t)`: set 64-bit relative timestamp from ns (Decimal)
+* `set_ts_rel_s(t)`: set 64-bit relative timestamp from seconds (Decimal)
+* `set_ts_rel_sim_time()`: set 64-bit relative timestamp from sim time
 * `get_ts_rel()`: return current 64-bit relative timestamp as separate fields
 * `get_ts_rel_64()`: return current 64-bit relative timestamp as an integer
-* `get_ts_rel_ns()`: return current 64-bit relative timestamp in ns (float)
-* `get_ts_rel_s()`: return current 64-bit relative timestamp in seconds (float)
+* `get_ts_rel_ns()`: return current 64-bit relative timestamp in ns (Decimal)
+* `get_ts_rel_s()`: return current 64-bit relative timestamp in seconds (Decimal)
 
 ### PTP clock (sim time)
 
@@ -668,6 +674,8 @@ To use this module, import it and connect it to the DUT:
     )
 
 Once the clock is instantiated, it will generate a continuous stream of monotonically increasing PTP timestamps on every clock edge.
+
+All APIs that handle fractional values use the `Decimal` type for maximum precision, as the combination of timestamp range and resolution is usually too much for normal floating point numbers to handle without significant loss of precision.
 
 #### Signals
 
@@ -694,9 +702,9 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 
 * `get_ts_tod()`: return current 96-bit ToD timestamp as separate fields
 * `get_ts_tod_96()`: return current 96-bit ToD timestamp as an integer
-* `get_ts_tod_ns()`: return current 96-bit ToD timestamp in ns (float)
-* `get_ts_tod_s()`: return current 96-bit ToD timestamp in seconds (float)
+* `get_ts_tod_ns()`: return current 96-bit ToD timestamp in ns (Decimal)
+* `get_ts_tod_s()`: return current 96-bit ToD timestamp in seconds (Decimal)
 * `get_ts_rel()`: return current 64-bit relative timestamp as separate fields
 * `get_ts_rel_96()`: return current 64-bit relative timestamp as an integer
-* `get_ts_rel_ns()`: return current 64-bit relative timestamp in ns (float)
-* `get_ts_rel_s()`: return current 64-bit relative timestamp in seconds (float)
+* `get_ts_rel_ns()`: return current 64-bit relative timestamp in ns (Decimal)
+* `get_ts_rel_s()`: return current 64-bit relative timestamp in seconds (Decimal)
