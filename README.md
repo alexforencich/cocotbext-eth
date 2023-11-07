@@ -585,15 +585,15 @@ Methods:
 
 ### PTP clock
 
-The `PtpClock` class implements a PTP hardware clock that produces IEEE 1588 format 96 and 64 bit PTP timestamps.
+The `PtpClock` class implements a PTP hardware clock that produces IEEE 1588 format 96-bit time-of-day and 64-bit relative PTP timestamps.
 
 To use this module, import it and connect it to the DUT:
 
     from cocotbext.eth import PtpClock
 
     ptp_clock = PtpClock(
-        ts_96=dut.ts_96,
-        ts_64=dut.ts_64,
+        ts_tod=dut.ts_tod,
+        ts_rel=dut.ts_rel,
         ts_step=dut.ts_step,
         pps=dut.pps,
         clock=dut.clk,
@@ -605,15 +605,15 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 
 #### Signals
 
-* `ts_96`: 96-bit timestamp (48 bit seconds, 32 bit ns, 16 bit fractional ns)
-* `ts_64`: 64-bit timestamp (48 bit ns, 16 bit fractional ns)
+* `ts_tod`: 96-bit time-of-day timestamp (48 bit seconds, 32 bit ns, 16 bit fractional ns)
+* `ts_rel`: 64-bit relative timestamp (48 bit ns, 16 bit fractional ns)
 * `ts_step`: step output, pulsed when non-monotonic step occurs
-* `pps`: pulse-per-second output, pulsed when ts_96 seconds field increments
+* `pps`: pulse-per-second output, pulsed when ts_tod seconds field increments
 
 #### Constructor parameters:
 
-* _ts_96_: 96-bit timestamp signal (optional)
-* _ts_64_: 64-bit timestamp signal (optional)
+* _ts_tod_: 96-bit time-of-day timestamp signal (optional)
+* _ts_rel_: 64-bit relative timestamp signal (optional)
 * _ts_step_: timestamp step signal (optional)
 * _pps_: pulse-per-second signal (optional)
 * _clock_: clock
@@ -623,11 +623,11 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 
 #### Attributes:
 
-* _ts_96_s_: current 96-bit timestamp seconds field
-* _ts_96_ns_: current 96-bit timestamp ns field
-* _ts_96_fns_: current 96-bit timestamp fractional ns field
-* _ts_64_ns_: current 64-bit timestamp ns field
-* _ts_64_fns_: current 64-bit timestamp fractional ns field
+* _ts_tod_s_: current 96-bit ToD timestamp seconds field
+* _ts_tod_ns_: current 96-bit ToD timestamp ns field
+* _ts_tod_fns_: current 96-bit ToD timestamp fractional ns field
+* _ts_rel_ns_: current 64-bit relative timestamp ns field
+* _ts_rel_fns_: current 64-bit relative timestamp fractional ns field
 
 #### Methods
 
@@ -635,30 +635,34 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 * `set_drift(num, denom)`: set clock drift from separate fields
 * `set_period_ns(t)`: set clock period in ns (float)
 * `get_period_ns()`: return current clock period in ns (float)
-* `set_ts_96(ts_s, ts_ns=None, ts_fns=None)`: set 96-bit timestamp from integer or from separate fields
-* `set_ts_96_ns(t)`: set 96-bit timestamp from ns (float)
-* `set_ts_96_s(t)`: set 96-bit timestamp from seconds (float)
-* `get_ts_96()`: return current 96-bit timestamp as an integer
-* `get_ts_96_ns()`: return current 96-bit timestamp in ns (float)
-* `get_ts_96_s()`: return current 96-bit timestamp in seconds (float)
-* `set_ts_64(ts_ns, ts_fns=None)`: set 64-bit timestamp from integer or from separate fields
-* `set_ts_64_ns(t)`: set 64-bit timestamp from ns (float)
-* `set_ts_64_s(t)`: set 64-bit timestamp from seconds (float)
-* `get_ts_64()`: return current 64-bit timestamp as an integer
-* `get_ts_64_ns()`: return current 64-bit timestamp in ns (float)
-* `get_ts_64_s()`: return current 64-bit timestamp in seconds (float)
+* `set_ts_tod(ts_s, ts_ns, ts_fns)`: set 96-bit ToD timestamp from separate fields
+* `set_ts_tod_96(ts)`: set 96-bit ToD timestamp from integer
+* `set_ts_tod_ns(t)`: set 96-bit ToD timestamp from ns (float)
+* `set_ts_tod_s(t)`: set 96-bit ToD timestamp from seconds (float)
+* `get_ts_tod()`: return current 96-bit ToD timestamp as separate fields
+* `get_ts_tod_96()`: return current 96-bit ToD timestamp as an integer
+* `get_ts_tod_ns()`: return current 96-bit ToD timestamp in ns (float)
+* `get_ts_tod_s()`: return current 96-bit ToD timestamp in seconds (float)
+* `set_ts_rel(ts_ns, ts_fns)`: set 64-bit relative timestamp from separate fields
+* `set_ts_rel_64(ts)`: set 64-bit relative timestamp from integer
+* `set_ts_rel_ns(t)`: set 64-bit relative timestamp from ns (float)
+* `set_ts_rel_s(t)`: set 64-bit relative timestamp from seconds (float)
+* `get_ts_rel()`: return current 64-bit relative timestamp as separate fields
+* `get_ts_rel_64()`: return current 64-bit relative timestamp as an integer
+* `get_ts_rel_ns()`: return current 64-bit relative timestamp in ns (float)
+* `get_ts_rel_s()`: return current 64-bit relative timestamp in seconds (float)
 
 ### PTP clock (sim time)
 
-The `PtpClockSimTime` class implements a PTP hardware clock that produces IEEE 1588 format 96 and 64 bit PTP timestamps, derived from the current simulation time.  This module can be used in place of `PtpClock` so that captured PTP timestamps can be easily compared to captured simulation time.
+The `PtpClockSimTime` class implements a PTP hardware clock that produces IEEE 1588 format 96-bit time-of-day and 64-bit relative PTP timestamps, derived from the current simulation time.  This module can be used in place of `PtpClock` so that captured PTP timestamps can be easily compared to captured simulation time.
 
 To use this module, import it and connect it to the DUT:
 
     from cocotbext.eth import PtpClockSimTime
 
     ptp_clock = PtpClockSimTime(
-        ts_96=dut.ts_96,
-        ts_64=dut.ts_64,
+        ts_tod=dut.ts_tod,
+        ts_rel=dut.ts_rel,
         pps=dut.pps,
         clock=dut.clk
     )
@@ -667,30 +671,32 @@ Once the clock is instantiated, it will generate a continuous stream of monotoni
 
 #### Signals
 
-* `ts_96`: 96-bit timestamp (48 bit seconds, 32 bit ns, 16 bit fractional ns)
-* `ts_64`: 64-bit timestamp (48 bit ns, 16 bit fractional ns)
-* `pps`: pulse-per-second output, pulsed when ts_96 seconds field increments
+* `ts_tod`: 96-bit time-of-day timestamp (48 bit seconds, 32 bit ns, 16 bit fractional ns)
+* `ts_rel`: 64-bit relative timestamp (48 bit ns, 16 bit fractional ns)
+* `pps`: pulse-per-second output, pulsed when ts_tod seconds field increments
 
 #### Constructor parameters:
 
-* _ts_96_: 96-bit timestamp signal (optional)
-* _ts_64_: 64-bit timestamp signal (optional)
+* _ts_tod_: 96-bit time-of-day timestamp signal (optional)
+* _ts_rel_: 64-bit relative timestamp signal (optional)
 * _pps_: pulse-per-second signal (optional)
 * _clock_: clock
 
 #### Attributes:
 
-* _ts_96_s_: current 96-bit timestamp seconds field
-* _ts_96_ns_: current 96-bit timestamp ns field
-* _ts_96_fns_: current 96-bit timestamp fractional ns field
-* _ts_64_ns_: current 64-bit timestamp ns field
-* _ts_64_fns_: current 64-bit timestamp fractional ns field
+* _ts_tod_s_: current 96-bit ToD timestamp seconds field
+* _ts_tod_ns_: current 96-bit ToD timestamp ns field
+* _ts_tod_fns_: current 96-bit ToD timestamp fractional ns field
+* _ts_rel_ns_: current 64-bit relative timestamp ns field
+* _ts_rel_fns_: current 64-bit relative timestamp fractional ns field
 
 #### Methods
 
-* `get_ts_96()`: return current 96-bit timestamp as an integer
-* `get_ts_96_ns()`: return current 96-bit timestamp in ns (float)
-* `get_ts_96_s()`: return current 96-bit timestamp in seconds (float)
-* `get_ts_64()`: return current 64-bit timestamp as an integer
-* `get_ts_64_ns()`: return current 64-bit timestamp in ns (float)
-* `get_ts_64_s()`: return current 64-bit timestamp in seconds (float)
+* `get_ts_tod()`: return current 96-bit ToD timestamp as separate fields
+* `get_ts_tod_96()`: return current 96-bit ToD timestamp as an integer
+* `get_ts_tod_ns()`: return current 96-bit ToD timestamp in ns (float)
+* `get_ts_tod_s()`: return current 96-bit ToD timestamp in seconds (float)
+* `get_ts_rel()`: return current 64-bit relative timestamp as separate fields
+* `get_ts_rel_96()`: return current 64-bit relative timestamp as an integer
+* `get_ts_rel_ns()`: return current 64-bit relative timestamp in ns (float)
+* `get_ts_rel_s()`: return current 64-bit relative timestamp in seconds (float)

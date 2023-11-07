@@ -34,8 +34,8 @@ module test_ptp_clock
     input  wire        clk,
     input  wire        rst,
 
-    inout  wire [95:0] ts_96,
-    inout  wire [63:0] ts_64,
+    inout  wire [95:0] ts_tod,
+    inout  wire [63:0] ts_rel,
     inout  wire        ts_step,
     inout  wire        pps
 );

@@ -77,12 +77,12 @@ class TB:
         )
 
         self.tx_ptp = PtpClockSimTime(
-            ts_96=dut.tx_ptp_time,
+            ts_tod=dut.tx_ptp_time,
             clock=dut.tx_clk
         )
 
         self.rx_ptp = PtpClockSimTime(
-            ts_96=dut.rx_ptp_time,
+            ts_tod=dut.rx_ptp_time,
             clock=dut.rx_clk
         )
 
