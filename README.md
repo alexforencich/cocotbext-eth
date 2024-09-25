@@ -11,7 +11,7 @@ GitHub repository: https://github.com/alexforencich/cocotbext-eth
 
 Ethernet interface models for [cocotb](https://github.com/cocotb/cocotb).
 
-Includes PHY-attach interface models for MII, GMII, RGMII, and XGMII; PHY chip interface models for MII, GMII, and RGMII; PTP clock simulation models; and a generic Ethernet MAC model that supports rate enforcement and PTP timestamping.
+Includes PHY-attach interface models for MII, RMII, GMII, RGMII, and XGMII; PHY chip interface models for MII, GMII, and RGMII; PTP clock simulation models; and a generic Ethernet MAC model that supports rate enforcement and PTP timestamping.
 
 ## Installation
 
@@ -243,6 +243,100 @@ Example transfer via MII at 100 Mbps:
                      _________________     _________
     tx_en      _____/                  ...          \_______
 
+### RMII
+
+The `RmiiSource` and `RmiiSink` classes can be used to drive, receive, and monitor MII traffic.  The `RmiiSource` drives RMII traffic into a design.  The `RmiiSink` receives RMII traffic, including monitoring internal interfaces.  The `RmiiPhy` class is a wrapper around `RmiiSource` and `RmiiSink` that also provides rate-switching to emulate an RMII PHY chip.
+
+To use these modules, import the one you need and connect it to the DUT:
+
+    from cocotbext.eth import RmiiSource, RmiiSink
+
+    rmii_source = RmiiSource(dut.rxd, dut.rx_er, dut.rx_en, dut.clk, dut.rst)
+    rmii_sink = RmiiSink(dut.txd, dut.tx_er, dut.tx_en, dut.clk, dut.rst)
+
+note that dut.tx_er is not used in normal circumstances.
+
+All signals must be passed separately into these classes.
+
+To send data into a design with an `RmiiSource`, call `send()` or `send_nowait()`.  Accepted data types are iterables that can be converted to bytearray or `GmiiFrame` objects.  Optionally, call `wait()` to wait for the transmit operation to complete.  Example:
+
+    await rmii_source.send(GmiiFrame.from_payload(b'test data'))
+    # wait for operation to complete (optional)
+    await rmii_source.wait()
+
+It is also possible to wait for the transmission of a specific frame to complete by passing an event in the tx_complete field of the `GmiiFrame` object, and then awaiting the event.  The frame, with simulation time fields set, will be returned in the event data.  Example:
+
+    frame = GmiiFrame.from_payload(b'test data', tx_complete=Event())
+    await rmii_source.send(frame)
+    await frame.tx_complete.wait()
+    print(frame.tx_complete.data.sim_time_sfd)
+
+To receive data with an `RmiiSink`, call `recv()` or `recv_nowait()`.  Optionally call `wait()` to wait for new receive data.
+
+    data = await mii_sink.recv()
+
+The `RmiiPhy` class provides a model of an RMII PHY chip.  It wraps instances of `RmiiSource` (`rx`) and `RmiiSink` (`tx`), provides the necessary clocking components, and provides the `set_speed()` method to change the link speed.  `set_speed()` prescales the reference clock to the correct speed.  In general, the `RmiiPhy` class is intended to be used for integration tests where the design expects to be directly connected to an external MII PHY chip and contains all of the necessary IO and clocking logic.  Example:
+
+    from cocotbext.eth import GmiiFrame, RmiiPhy
+
+    rmii_phy = RmiiPhy(dut.txd, dut.tx_en, dut.tx_ref_clk,
+        dut.rxd, dut.rx_er, dut.rx_crs_dv, dut.rst, speed=100e6)
+
+    rmii_phy.set_speed(10e6)
+
+    await rmii_phy.rx.send(GmiiFrame.from_payload(b'test RX data'))
+    tx_data = await rmii_phy.tx.recv()
+
+#### Signals
+
+* `txd`, `rxd`: data
+* `rx_er`: error (when asserted with `rx_crs_dv`)
+* `tx_en`, `rx_crs_dv`: data valid
+
+#### Constructor parameters:
+
+* _data_: data signal (txd, rxd, etc.)
+* _er_: error signal (rx_er, etc.) (optional)
+* _dv_: data valid signal (tx_en, rx_crs_dv, etc.)
+* _clock_: clock signal input
+* _reset_: reset signal (optional)
+* _enable_: clock enable (optional)
+* _reset_active_level_: reset active level (optional, default `True`)
+
+#### Attributes:
+
+* _queue_occupancy_bytes_: number of bytes in queue
+* _queue_occupancy_frames_: number of frames in queue
+* _queue_occupancy_limit_bytes_: max number of bytes in queue allowed before backpressure is applied (source only)
+* _queue_occupancy_limit_frames_: max number of frames in queue allowed before backpressure is applied (source only)
+
+#### Methods
+
+* `send(frame)`: send _frame_ (blocking) (source)
+* `send_nowait(frame)`: send _frame_ (non-blocking) (source)
+* `recv()`: receive a frame as a `GmiiFrame` (blocking) (sink)
+* `recv_nowait()`: receive a frame as a `GmiiFrame` (non-blocking) (sink)
+* `count()`: returns the number of items in the queue (all)
+* `empty()`: returns _True_ if the queue is empty (all)
+* `full()`: returns _True_ if the queue occupancy limits are met (source)
+* `idle()`: returns _True_ if no transfer is in progress (all) or if the queue is not empty (source)
+* `set_speed()`: sets the transfer speed (all)
+* `clear()`: drop all data in queue (all)
+* `wait()`: wait for idle (source)
+* `wait(timeout=0, timeout_unit='ns')`: wait for frame received (sink)
+
+#### RMII timing diagram
+
+Example transfer via MII at 100 Mbps:
+
+                 _   _   _   _   _   _       _   _   _   _
+    tx_clk     _/ \_/ \_/ \_/ \_/ \_/  ... _/ \_/ \_/ \_/ \_
+                     ___ ___ ___ ___ _     _ ___ ___
+    tx_d[1:0]  XXXXXX_0_1_2_3_0_1_2_3_ ... _X_f_X_b_XXXXXXXX
+
+    tx_er      _______________________ ... _________________
+                     _________________     _________
+    tx_en      _____/                  ...          \_______
 
 ### RGMII
 

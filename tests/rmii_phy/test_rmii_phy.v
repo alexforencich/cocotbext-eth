@@ -1,6 +1,7 @@
-"""
+/*
 
 Copyright (c) 2020 Alex Forencich
+Copyright (c) 2024 Sebastien Van Cauwenberghe
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,15 +21,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-"""
+*/
 
-from .version import __version__
+// Language: Verilog 2001
 
-from .gmii import GmiiFrame, GmiiSource, GmiiSink, GmiiPhy
-from .mii import MiiSource, MiiSink, MiiPhy
-from .rmii import RmiiSource, RmiiSink, RmiiPhy
-from .rgmii import RgmiiSource, RgmiiSink, RgmiiPhy
-from .xgmii import XgmiiFrame, XgmiiSource, XgmiiSink
-from .eth_mac import EthMacFrame, EthMacTx, EthMacRx, EthMac
+`timescale 1ns / 1ns
 
-from .ptp import PtpClock, PtpClockSimTime
+/*
+ * RMII PHY test
+ */
+module test_rmii_phy
+(
+    inout  wire        phy_rst,
+    inout  wire        phy_ref_clk,
+    inout  wire [1:0]  phy_txd,
+    inout  wire        phy_tx_en,
+    inout  wire [1:0]  phy_rxd,
+    inout  wire        phy_rx_er,
+    inout  wire        phy_rx_crs_dv
+);
+
+endmodule

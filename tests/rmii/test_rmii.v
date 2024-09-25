@@ -1,4 +1,4 @@
-"""
+/*
 
 Copyright (c) 2020 Alex Forencich
 
@@ -20,15 +20,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-"""
+*/
 
-from .version import __version__
+// Language: Verilog 2001
 
-from .gmii import GmiiFrame, GmiiSource, GmiiSink, GmiiPhy
-from .mii import MiiSource, MiiSink, MiiPhy
-from .rmii import RmiiSource, RmiiSink, RmiiPhy
-from .rgmii import RgmiiSource, RgmiiSink, RgmiiPhy
-from .xgmii import XgmiiFrame, XgmiiSource, XgmiiSink
-from .eth_mac import EthMacFrame, EthMacTx, EthMacRx, EthMac
+`timescale 1ns / 1ns
 
-from .ptp import PtpClock, PtpClockSimTime
+/*
+ * RMII test
+ */
+module test_rmii #
+(
+    parameter DATA_WIDTH = 2
+)
+(
+    input  wire                   clk,
+    input  wire                   rst,
+
+    inout  wire [DATA_WIDTH-1:0]  rmii_d,
+    inout  wire                   rmii_er,
+    inout  wire                   rmii_en,
+    inout  wire                   rmii_clk_en
+);
+
+endmodule
