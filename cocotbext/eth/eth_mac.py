@@ -1,6 +1,6 @@
 """
 
-Copyright (c) 2021 Alex Forencich
+Copyright (c) 2021-2025 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -140,7 +140,7 @@ class EthMacTx(Reset):
 
         self.log.info("Ethernet MAC TX model")
         self.log.info("cocotbext-eth version %s", __version__)
-        self.log.info("Copyright (c) 2020 Alex Forencich")
+        self.log.info("Copyright (c) 2021-2025 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
@@ -359,7 +359,7 @@ class EthMacRx(Reset):
 
         self.log.info("Ethernet MAC RX model")
         self.log.info("cocotbext-eth version %s", __version__)
-        self.log.info("Copyright (c) 2020 Alex Forencich")
+        self.log.info("Copyright (c) 2021-2025 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
