@@ -168,7 +168,7 @@ def incrementing_payload(length):
     return bytearray(itertools.islice(itertools.cycle(range(256)), length))
 
 
-if cocotb.SIM_NAME:
+if getattr(cocotb, 'top', None) is not None:
 
     if len(cocotb.top.tx_axis_tdata) == 8:
         speed = [100e6, 1e9]

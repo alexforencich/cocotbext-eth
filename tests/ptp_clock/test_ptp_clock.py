@@ -68,11 +68,11 @@ class TB:
         await RisingEdge(self.dut.clk)
 
     def get_ts_tod_ns(self):
-        ts = self.dut.ts_tod.value.integer
+        ts = int(self.dut.ts_tod.value)
         return Decimal(ts >> 48).scaleb(9) + (Decimal(ts & 0xffffffffffff) / Decimal(2**16))
 
     def get_ts_rel_ns(self):
-        ts = self.dut.ts_rel.value.integer
+        ts = int(self.dut.ts_rel.value)
         return Decimal(ts) / Decimal(2**16)
 
 
@@ -127,9 +127,9 @@ async def run_load_timestamps(dut):
 
     await RisingEdge(dut.clk)
 
-    assert dut.ts_tod.value.integer == (12345678 << 16) + (tb.ptp_clock.period_ns << 16) + (tb.ptp_clock.period_fns >> 16)
-    assert dut.ts_rel.value.integer == (12345678 << 16) + (tb.ptp_clock.period_ns << 16) + (tb.ptp_clock.period_fns >> 16)
-    assert dut.ts_step.value.integer == 1
+    assert int(dut.ts_tod.value) == (12345678 << 16) + (tb.ptp_clock.period_ns << 16) + (tb.ptp_clock.period_fns >> 16)
+    assert int(dut.ts_rel.value) == (12345678 << 16) + (tb.ptp_clock.period_ns << 16) + (tb.ptp_clock.period_fns >> 16)
+    assert int(dut.ts_step.value) == 1
 
     start_time = Decimal(get_sim_time('fs')).scaleb(-6)
     start_ts_tod = tb.get_ts_tod_ns()
@@ -184,10 +184,10 @@ async def run_seconds_increment(dut):
     for k in range(3000):
         await RisingEdge(dut.clk)
 
-        if dut.pps.value.integer:
+        if int(dut.pps.value):
             saw_pps = True
-            assert dut.ts_tod.value.integer >> 48 == 1
-            assert dut.ts_tod.value.integer & 0xffffffffffff < 10*2**16
+            assert int(dut.ts_tod.value) >> 48 == 1
+            assert int(dut.ts_tod.value) & 0xffffffffffff < 10*2**16
 
     assert saw_pps
 

@@ -132,7 +132,7 @@ def cycle_en():
     return itertools.cycle([0, 0, 0, 1])
 
 
-if cocotb.SIM_NAME:
+if getattr(cocotb, 'top', None) is not None:
 
     factory = TestFactory(run_test)
     factory.add_option("payload_lengths", [size_list])

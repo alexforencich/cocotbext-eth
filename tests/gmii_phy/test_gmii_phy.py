@@ -140,7 +140,7 @@ def cycle_en():
     return itertools.cycle([0, 0, 0, 1])
 
 
-if cocotb.SIM_NAME:
+if getattr(cocotb, 'top', None) is not None:
 
     for test in [run_test_tx, run_test_rx]:
 

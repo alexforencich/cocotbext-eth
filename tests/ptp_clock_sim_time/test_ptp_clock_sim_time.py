@@ -54,11 +54,11 @@ class TB:
         )
 
     def get_ts_tod_ns(self):
-        ts = self.dut.ts_tod.value.integer
+        ts = int(self.dut.ts_tod.value)
         return Decimal(ts >> 48).scaleb(9) + (Decimal(ts & 0xffffffffffff) / Decimal(2**16))
 
     def get_ts_rel_ns(self):
-        ts = self.dut.ts_rel.value.integer
+        ts = int(self.dut.ts_rel.value)
         return Decimal(ts) / Decimal(2**16)
 
 
