@@ -179,7 +179,7 @@ class EthMacTx(Reset):
             self.log.info("  tuser width: %d bits", len(self.bus.tuser))
         else:
             self.log.info("  tuser: not present")
-        if self.ptp_time:
+        if self.ptp_time is not None:
             self.log.info("  ptp_time width: %d bits", len(self.ptp_time))
         else:
             self.log.info("  ptp_time: not present")
@@ -194,11 +194,11 @@ class EthMacTx(Reset):
             raise ValueError(f"Bus does not evenly divide into byte lanes "
                 f"({self.byte_lanes} * {self.byte_size} != {self.width})")
 
-        if self.ptp_ts:
+        if self.ptp_ts is not None:
             self.ptp_ts.setimmediatevalue(0)
-        if self.ptp_ts_tag:
+        if self.ptp_ts_tag is not None:
             self.ptp_ts_tag.setimmediatevalue(0)
-        if self.ptp_ts_valid:
+        if self.ptp_ts_valid is not None:
             self.ptp_ts_valid.setimmediatevalue(0)
 
         self._run_cr = None
@@ -255,7 +255,7 @@ class EthMacTx(Reset):
                 self._run_ts_cr.kill()
                 self._run_ts_cr = None
 
-            if self.ptp_ts_valid:
+            if self.ptp_ts_valid is not None:
                 self.ptp_ts_valid.value = 0
 
             self.active = False
@@ -266,7 +266,7 @@ class EthMacTx(Reset):
             self.log.info("Reset de-asserted")
             if self._run_cr is None:
                 self._run_cr = cocotb.start_soon(self._run())
-            if self._run_ts_cr is None and self.ptp_ts:
+            if self._run_ts_cr is None and self.ptp_ts is not None:
                 self._run_ts_cr = cocotb.start_soon(self._run_ts())
 
     async def _run(self):
@@ -287,7 +287,7 @@ class EthMacTx(Reset):
 
             frame.sim_time_sfd = get_sim_time()
 
-            if self.ptp_time:
+            if self.ptp_time is not None:
                 frame.ptp_timestamp = self.ptp_time.value.integer
                 frame.ptp_tag = cycle.tuser.integer >> 1
                 self.ts_queue.put_nowait((frame.ptp_timestamp, frame.ptp_tag))
@@ -402,7 +402,7 @@ class EthMacRx(Reset):
             self.log.info("  tuser width: %d bits", len(self.bus.tuser))
         else:
             self.log.info("  tuser: not present")
-        if self.ptp_time:
+        if self.ptp_time is not None:
             self.log.info("  ptp_time width: %d bits", len(self.ptp_time))
         else:
             self.log.info("  ptp_time: not present")
@@ -513,7 +513,7 @@ class EthMacRx(Reset):
 
             frame.sim_time_sfd = get_sim_time()
 
-            if self.ptp_time:
+            if self.ptp_time is not None:
                 frame.ptp_timestamp = self.ptp_time.value.integer
                 tuser |= frame.ptp_timestamp << 1
 
