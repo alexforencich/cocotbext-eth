@@ -286,7 +286,7 @@ class XgmiiSource(Reset):
         while True:
             await clock_edge_event
 
-            if self.enable is None or self.enable.value:
+            if self.enable is None or int(self.enable.value):
                 if ifg_cnt + deficit_idle_cnt > self.byte_lanes-1 or (not self.enable_dic and ifg_cnt > 4):
                     # in IFG
                     ifg_cnt = ifg_cnt - self.byte_lanes
@@ -488,9 +488,9 @@ class XgmiiSink(Reset):
         while True:
             await clock_edge_event
 
-            if self.enable is None or self.enable.value:
-                data_val = self.data.value.integer
-                ctrl_val = self.ctrl.value.integer
+            if self.enable is None or int(self.enable.value):
+                data_val = int(self.data.value)
+                ctrl_val = int(self.ctrl.value)
                 for offset in range(self.byte_lanes):
                     d_val = (data_val >> (offset*8)) & 0xff
                     c_val = (ctrl_val >> offset) & 1

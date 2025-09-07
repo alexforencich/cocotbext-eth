@@ -278,7 +278,7 @@ class GmiiSource(Reset):
         while True:
             await clock_edge_event
 
-            if self.enable is None or self.enable.value:
+            if self.enable is None or int(self.enable.value):
                 if ifg_cnt > 0:
                     # in IFG
                     ifg_cnt -= 1
@@ -297,7 +297,7 @@ class GmiiSource(Reset):
                     frame.normalize()
 
                     if self.mii_select is not None:
-                        self.mii_mode = bool(self.mii_select.value.integer)
+                        self.mii_mode = bool(int(self.mii_select.value))
 
                     if self.mii_mode:
                         # convert to MII
@@ -457,10 +457,10 @@ class GmiiSink(Reset):
         while True:
             await clock_edge_event
 
-            if self.enable is None or self.enable.value:
-                d_val = self.data.value.integer
-                dv_val = self.dv.value.integer
-                er_val = 0 if self.er is None else self.er.value.integer
+            if self.enable is None or int(self.enable.value):
+                d_val = int(self.data.value)
+                dv_val = int(self.dv.value)
+                er_val = 0 if self.er is None else int(self.er.value)
 
                 if frame is None:
                     if dv_val:
@@ -472,7 +472,7 @@ class GmiiSink(Reset):
                         # end of frame
 
                         if self.mii_select is not None:
-                            self.mii_mode = bool(self.mii_select.value.integer)
+                            self.mii_mode = bool(int(self.mii_select.value))
 
                         if self.mii_mode:
                             odd = True

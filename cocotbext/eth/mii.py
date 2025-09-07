@@ -179,7 +179,7 @@ class MiiSource(Reset):
         while True:
             await clock_edge_event
 
-            if self.enable is None or self.enable.value:
+            if self.enable is None or int(self.enable.value):
                 if ifg_cnt > 0:
                     # in IFG
                     ifg_cnt -= 1
@@ -348,10 +348,10 @@ class MiiSink(Reset):
         while True:
             await clock_edge_event
 
-            if self.enable is None or self.enable.value:
-                d_val = self.data.value.integer
-                dv_val = self.dv.value.integer
-                er_val = 0 if self.er is None else self.er.value.integer
+            if self.enable is None or int(self.enable.value):
+                d_val = int(self.data.value)
+                dv_val = int(self.dv.value)
+                er_val = 0 if self.er is None else int(self.er.value)
 
                 if frame is None:
                     if dv_val:

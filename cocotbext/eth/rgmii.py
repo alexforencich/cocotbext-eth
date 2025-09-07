@@ -192,7 +192,7 @@ class RgmiiSource(Reset):
             self.data.value = d >> 4
             self.ctrl.value = en ^ er
 
-            if self.enable is None or self.enable.value:
+            if self.enable is None or int(self.enable.value):
                 in_ifg = False
 
                 if ifg_cnt > 0:
@@ -214,7 +214,7 @@ class RgmiiSource(Reset):
                     frame.normalize()
 
                     if self.mii_select is not None:
-                        self.mii_mode = bool(self.mii_select.value.integer)
+                        self.mii_mode = bool(int(self.mii_select.value))
 
                     if self.mii_mode:
                         # convert to MII
@@ -375,17 +375,17 @@ class RgmiiSink(Reset):
         while True:
             await clock_rising_edge_event
 
-            if self.enable is None or self.enable.value:
+            if self.enable is None or int(self.enable.value):
 
                 # capture low nibble on rising edge
-                d_val = self.data.value.integer
-                dv_val = self.ctrl.value.integer
+                d_val = int(self.data.value)
+                dv_val = int(self.ctrl.value)
 
                 await clock_falling_edge_event
 
                 # capture high nibble on falling edge
-                d_val |= self.data.value.integer << 4
-                er_val = dv_val ^ self.ctrl.value.integer
+                d_val |= int(self.data.value) << 4
+                er_val = dv_val ^ int(self.ctrl.value)
 
                 if frame is None:
                     if dv_val:
@@ -397,7 +397,7 @@ class RgmiiSink(Reset):
                         # end of frame
 
                         if self.mii_select is not None:
-                            self.mii_mode = bool(self.mii_select.value.integer)
+                            self.mii_mode = bool(int(self.mii_select.value))
 
                         if self.mii_mode:
                             odd = True

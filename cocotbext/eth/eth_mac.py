@@ -288,8 +288,8 @@ class EthMacTx(Reset):
             frame.sim_time_sfd = get_sim_time()
 
             if self.ptp_time is not None:
-                frame.ptp_timestamp = self.ptp_time.value.integer
-                frame.ptp_tag = cycle.tuser.integer >> 1
+                frame.ptp_timestamp = int(self.ptp_time.value)
+                frame.ptp_tag = int(cycle.tuser) >> 1
                 self.ts_queue.put_nowait((frame.ptp_timestamp, frame.ptp_tag))
 
             # process frame data
@@ -297,14 +297,14 @@ class EthMacTx(Reset):
                 byte_count = 0
 
                 for offset in range(self.byte_lanes):
-                    if not hasattr(self.bus, "tkeep") or (cycle.tkeep.integer >> offset) & 1:
-                        data.append((cycle.tdata.integer >> (offset * self.byte_size)) & self.byte_mask)
+                    if not hasattr(self.bus, "tkeep") or (int(cycle.tkeep) >> offset) & 1:
+                        data.append((int(cycle.tdata) >> (offset * self.byte_size)) & self.byte_mask)
                         byte_count += 1
 
                 # wait for serialization time
                 await Timer(self.time_scale*byte_count*8//self.speed, 'step')
 
-                if cycle.tlast.integer:
+                if int(cycle.tlast):
                     frame.data = bytes(data)
                     frame.sim_time_end = get_sim_time()
                     self.log.info("RX frame: %s", frame)
@@ -514,7 +514,7 @@ class EthMacRx(Reset):
             frame.sim_time_sfd = get_sim_time()
 
             if self.ptp_time is not None:
-                frame.ptp_timestamp = self.ptp_time.value.integer
+                frame.ptp_timestamp = int(self.ptp_time.value)
                 tuser |= frame.ptp_timestamp << 1
 
             # process frame data
