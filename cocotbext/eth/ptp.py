@@ -343,10 +343,21 @@ class PtpClockSimTime:
     async def _run(self):
         clock_edge_event = RisingEdge(self.clock)
 
+        clk_period = 0
+        last_clk = 0
+
         while True:
             await clock_edge_event
 
-            ts_ns, ts_fns = self.ctx.divmod(Decimal(get_sim_time('fs')).scaleb(-6), Decimal(1))
+            sim_time = get_sim_time('fs')
+            if last_clk:
+                clk_period = sim_time - last_clk
+            last_clk = sim_time
+
+            # offset sim time such that it is the correct time going in to the next active edge
+            cur_time = sim_time + clk_period
+
+            ts_ns, ts_fns = self.ctx.divmod(Decimal(cur_time).scaleb(-6), Decimal(1))
 
             self.ts_rel_ns = int(ts_ns.to_integral_value()) & 0xffffffffffff
             self.ts_rel_fns = int((ts_fns * Decimal(2**16)).to_integral_value())
