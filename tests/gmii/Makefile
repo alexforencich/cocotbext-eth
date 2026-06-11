@@ -33,6 +33,9 @@ MODULE   = $(COCOTB_TEST_MODULES)
 TOPLEVEL = $(COCOTB_TOPLEVEL)
 VERILOG_SOURCES += $(DUT).v
 
+# module parameters
+export PARAM_DATA_W := 8
+
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
 

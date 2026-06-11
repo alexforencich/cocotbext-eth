@@ -1,6 +1,6 @@
 """
 
-Copyright (c) 2020-2025 Alex Forencich
+Copyright (c) 2020-2026 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ import zlib
 
 import cocotb
 from cocotb.queue import Queue, QueueFull
-from cocotb.triggers import RisingEdge, Timer, First, Event
+from cocotb.triggers import RisingEdge, Edge, Timer, First, Event
 from cocotb.utils import get_sim_time, get_sim_steps
 
 from .version import __version__
@@ -146,7 +146,7 @@ class GmiiSource(Reset):
 
         self.log.info("GMII source")
         self.log.info("cocotbext-eth version %s", __version__)
-        self.log.info("Copyright (c) 2020-2025 Alex Forencich")
+        self.log.info("Copyright (c) 2020-2026 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
@@ -168,15 +168,21 @@ class GmiiSource(Reset):
         self.queue_occupancy_limit_bytes = -1
         self.queue_occupancy_limit_frames = -1
 
-        self.width = 8
-        self.byte_width = 1
+        self.width = len(self.data)
+        self.byte_size = 8
+        self.byte_lanes = len(self.dv)
 
-        assert len(self.data) == 8
+        assert self.width == self.byte_lanes * self.byte_size
+
+        self.log.info("GMII source model configuration")
+        self.log.info("  Byte size: %d bits", self.byte_size)
+        self.log.info("  Data width: %d bits (%d bytes)", self.width, self.byte_lanes)
+
         self.data.setimmediatevalue(0)
         if self.er is not None:
-            assert len(self.er) == 1
+            assert len(self.er) == self.byte_lanes
             self.er.setimmediatevalue(0)
-        assert len(self.dv) == 1
+        assert len(self.dv) == self.byte_lanes
         self.dv.setimmediatevalue(0)
 
         self._run_cr = None
@@ -287,73 +293,89 @@ class GmiiSource(Reset):
                 clk_period = sim_time - last_clk
             last_clk = sim_time
 
+            d_out = 0
+            er_out = 0
+            dv_out = 0
+
             if self.enable is None or int(self.enable.value):
-                if ifg_cnt > 0:
-                    # in IFG
-                    ifg_cnt -= 1
+                for k in range(self.byte_lanes):
+                    d_val = 0
+                    er_val = 0
+                    dv_val = 0
 
-                elif frame is None and not self.queue.empty():
-                    # send frame
-                    frame = self.queue.get_nowait()
-                    self.dequeue_event.set()
-                    self.queue_occupancy_bytes -= len(frame)
-                    self.queue_occupancy_frames -= 1
-                    self.current_frame = frame
-                    frame.sim_time_start = sim_time
-                    frame.sim_time_sfd = None
-                    frame.sim_time_end = None
-                    self.log.info("TX frame: %s", frame)
-                    frame.normalize()
+                    if ifg_cnt > 0 or frame is not None or k != 0:
+                        pass
+                    elif not self.queue.empty():
+                        # send frame
+                        frame = self.queue.get_nowait()
+                        self.dequeue_event.set()
+                        self.queue_occupancy_bytes -= len(frame)
+                        self.queue_occupancy_frames -= 1
+                        self.current_frame = frame
+                        frame.sim_time_start = sim_time + (clk_period // self.byte_lanes * k)
+                        frame.sim_time_sfd = None
+                        frame.sim_time_end = None
+                        self.log.info("TX frame: %s", frame)
+                        frame.normalize()
 
-                    if self.mii_select is not None:
-                        self.mii_mode = bool(int(self.mii_select.value))
+                        if self.mii_select is not None:
+                            self.mii_mode = bool(int(self.mii_select.value))
 
-                    if self.mii_mode:
-                        # convert to MII
-                        frame_data = []
-                        frame_error = []
-                        for b, e in zip(frame.data, frame.error):
-                            frame_data.append(b & 0x0F)
-                            frame_data.append(b >> 4)
-                            frame_error.append(e)
-                            frame_error.append(e)
+                        if self.mii_mode:
+                            # convert to MII
+                            frame_data = []
+                            frame_error = []
+                            for b, e in zip(frame.data, frame.error):
+                                frame_data.append(b & 0x0F)
+                                frame_data.append(b >> 4)
+                                frame_error.append(e)
+                                frame_error.append(e)
+                        else:
+                            frame_data = frame.data
+                            frame_error = frame.error
+
+                        self.active = True
+                        frame_offset = 0
+                        in_pre = True
                     else:
-                        frame_data = frame.data
-                        frame_error = frame.error
-
-                    self.active = True
-                    frame_offset = 0
-                    in_pre = True
-
-                if frame is not None:
-                    d = frame_data[frame_offset]
-                    if frame.sim_time_sfd is None and not in_pre:
-                        frame.sim_time_sfd = get_sim_time()
-                    if d in (EthPre.SFD, 0xD):
-                        in_pre = False
-                    self.data.value = d
-                    if self.er is not None:
-                        self.er.value = frame_error[frame_offset]
-                    self.dv.value = 1
-                    frame_offset += 1
-
-                    if frame_offset >= len(frame_data):
-                        ifg_cnt = max(self.ifg, 1)
-                        frame.sim_time_end = sim_time
-                        frame.handle_tx_complete()
-                        frame = None
-                        self.current_frame = None
-                else:
-                    self.data.value = 0
-                    if self.er is not None:
-                        self.er.value = 0
-                    self.dv.value = 0
-                    self.active = False
-
-                    if ifg_cnt == 0 and self.queue.empty():
+                        self.active = False
                         self.idle_event.set()
-                        self.active_event.clear()
-                        await self.active_event.wait()
+
+                    if frame is None:
+                        # idle
+                        if ifg_cnt > 0:
+                            ifg_cnt -= 1
+
+                    if frame is not None:
+                        d_val = frame_data[frame_offset]
+                        if frame.sim_time_sfd is None and not in_pre:
+                            frame.sim_time_sfd = sim_time + (clk_period // self.byte_lanes * k)
+                        if d_val in (EthPre.SFD, 0xD):
+                            in_pre = False
+                        er_val = frame_error[frame_offset]
+                        dv_val = 1
+                        frame_offset += 1
+
+                        if frame_offset >= len(frame_data):
+                            ifg_cnt = max(self.ifg, 1)
+                            frame.sim_time_end = sim_time + (clk_period // self.byte_lanes * k)
+                            frame.handle_tx_complete()
+                            frame = None
+                            self.current_frame = None
+
+                    d_out |= d_val << (k*8)
+                    er_out |= er_val << k
+                    dv_out |= dv_val << k
+
+                self.data.value = d_out
+                if self.er is not None:
+                    self.er.value = er_out
+                self.dv.value = dv_out
+
+                if not self.active:
+                    self.idle_event.set()
+                    self.active_event.clear()
+                    await self.active_event.wait()
 
             elif self.enable is not None and not self.enable.value:
                 await enable_event
@@ -373,7 +395,7 @@ class GmiiSink(Reset):
 
         self.log.info("GMII sink")
         self.log.info("cocotbext-eth version %s", __version__)
-        self.log.info("Copyright (c) 2020-2025 Alex Forencich")
+        self.log.info("Copyright (c) 2020-2026 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
@@ -387,14 +409,20 @@ class GmiiSink(Reset):
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
 
-        self.width = 8
-        self.byte_width = 1
+        self.width = len(self.data)
+        self.byte_size = 8
+        self.byte_lanes = len(self.dv)
 
-        assert len(self.data) == 8
+        assert self.width == self.byte_lanes * self.byte_size
+
+        self.log.info("GMII sink model configuration")
+        self.log.info("  Byte size: %d bits", self.byte_size)
+        self.log.info("  Data width: %d bits (%d bytes)", self.width, self.byte_lanes)
+
         if self.er is not None:
-            assert len(self.er) == 1
+            assert len(self.er) == self.byte_lanes
         if self.dv is not None:
-            assert len(self.dv) == 1
+            assert len(self.dv) == self.byte_lanes
 
         self._run_cr = None
 
@@ -461,7 +489,7 @@ class GmiiSink(Reset):
 
         clock_edge_event = RisingEdge(self.clock)
 
-        active_event = RisingEdge(self.dv)
+        active_event = Edge(self.dv)
 
         enable_event = None
         if self.enable is not None:
@@ -479,66 +507,70 @@ class GmiiSink(Reset):
             last_clk = sim_time
 
             if self.enable is None or int(self.enable.value):
-                d_val = int(self.data.value)
-                dv_val = int(self.dv.value)
-                er_val = 0 if self.er is None else int(self.er.value)
+                d_in = int(self.data.value)
+                dv_in = int(self.dv.value)
+                er_in = 0 if self.er is None else int(self.er.value)
 
-                if frame is None:
-                    if dv_val:
-                        # start of frame
-                        frame = GmiiFrame(bytearray(), [])
-                        frame.sim_time_start = sim_time
-                        in_pre = True
-                else:
-                    if not dv_val:
-                        # end of frame
+                for k in range(self.byte_lanes):
+                    d_val = (d_in >> (k*8)) & 0xff
+                    dv_val = (dv_in >> k) & 1
+                    er_val = (er_in >> k) & 1
 
-                        if self.mii_select is not None:
-                            self.mii_mode = bool(int(self.mii_select.value))
+                    if frame is None:
+                        if dv_val:
+                            # start of frame
+                            frame = GmiiFrame(bytearray(), [])
+                            frame.sim_time_start = sim_time + (clk_period // self.byte_lanes * k)
+                            in_pre = True
+                    else:
+                        if not dv_val:
+                            # end of frame
 
-                        if self.mii_mode:
-                            odd = True
-                            sync = False
-                            b = 0
-                            be = 0
-                            data = bytearray()
-                            error = []
-                            for n, e in zip(frame.data, frame.error):
-                                odd = not odd
-                                b = (n & 0x0F) << 4 | b >> 4
-                                be |= e
-                                if not sync and b == EthPre.SFD:
-                                    odd = True
-                                    sync = True
-                                if odd:
-                                    data.append(b)
-                                    error.append(be)
-                                    be = 0
-                            frame.data = data
-                            frame.error = error
+                            if self.mii_select is not None:
+                                self.mii_mode = bool(int(self.mii_select.value))
 
-                        frame.compact()
-                        frame.sim_time_end = sim_time
-                        self.log.info("RX frame: %s", frame)
+                            if self.mii_mode:
+                                odd = True
+                                sync = False
+                                b = 0
+                                be = 0
+                                data = bytearray()
+                                error = []
+                                for n, e in zip(frame.data, frame.error):
+                                    odd = not odd
+                                    b = (n & 0x0F) << 4 | b >> 4
+                                    be |= e
+                                    if not sync and b == EthPre.SFD:
+                                        odd = True
+                                        sync = True
+                                    if odd:
+                                        data.append(b)
+                                        error.append(be)
+                                        be = 0
+                                frame.data = data
+                                frame.error = error
 
-                        self.queue_occupancy_bytes += len(frame)
-                        self.queue_occupancy_frames += 1
+                            frame.compact()
+                            frame.sim_time_end = sim_time + (clk_period // self.byte_lanes * k)
+                            self.log.info("RX frame: %s", frame)
 
-                        self.queue.put_nowait(frame)
-                        self.active_event.set()
+                            self.queue_occupancy_bytes += len(frame)
+                            self.queue_occupancy_frames += 1
 
-                        frame = None
+                            self.queue.put_nowait(frame)
+                            self.active_event.set()
 
-                if frame is not None:
-                    if frame.sim_time_sfd is None and not in_pre:
-                        frame.sim_time_sfd = sim_time
-                    if d_val in (EthPre.SFD, 0xD):
-                        in_pre = False
+                            frame = None
+                        else:
+                            if frame.sim_time_sfd is None and not in_pre:
+                                frame.sim_time_sfd = sim_time + (clk_period // self.byte_lanes * k)
+                            if d_val in (EthPre.SFD, 0xD):
+                                in_pre = False
 
-                    frame.data.append(d_val)
-                    frame.error.append(er_val)
+                            frame.data.append(d_val)
+                            frame.error.append(er_val)
 
-                if not dv_val:
+                if dv_in == 0:
                     await active_event
 
             elif self.enable is not None and not self.enable.value:

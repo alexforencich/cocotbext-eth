@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2020-2025 Alex Forencich
+Copyright (c) 2020-2026 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,17 +31,18 @@ THE SOFTWARE.
  */
 module test_gmii #
 (
-    parameter DATA_WIDTH = 8
+    parameter DATA_W = 8,
+    parameter CTRL_W = DATA_W/8
 )
 (
-    input  wire                   clk,
-    input  wire                   rst,
+    input  wire               clk,
+    input  wire               rst,
 
-    inout  wire [DATA_WIDTH-1:0]  gmii_d,
-    inout  wire                   gmii_er,
-    inout  wire                   gmii_en,
-    inout  wire                   gmii_clk_en,
-    inout  wire                   gmii_mii_sel
+    inout  wire [DATA_W-1:0]  gmii_d,
+    inout  wire [CTRL_W-1:0]  gmii_er,
+    inout  wire [CTRL_W-1:0]  gmii_en,
+    inout  wire               gmii_clk_en,
+    inout  wire               gmii_mii_sel
 );
 
 endmodule

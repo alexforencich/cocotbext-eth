@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 
-Copyright (c) 2020-2025 Alex Forencich
+Copyright (c) 2020-2026 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@ import itertools
 import logging
 import os
 
+import pytest
 import cocotb_test.simulator
 
 import cocotb
@@ -148,7 +149,8 @@ if getattr(cocotb, 'top', None) is not None:
 tests_dir = os.path.dirname(__file__)
 
 
-def test_gmii(request):
+@pytest.mark.parametrize("data_w", [8, 16])
+def test_gmii(request, data_w):
     dut = "test_gmii"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -158,6 +160,8 @@ def test_gmii(request):
     ]
 
     parameters = {}
+
+    parameters['DATA_W'] = data_w
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 
