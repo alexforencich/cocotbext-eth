@@ -69,6 +69,7 @@ async def run_test(dut):
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
     await RisingEdge(dut.clk)
     start_time = Decimal(get_sim_time('fs')).scaleb(-6)

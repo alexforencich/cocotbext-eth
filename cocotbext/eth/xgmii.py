@@ -273,6 +273,7 @@ class XgmiiSource(Reset):
     async def _run(self):
         frame = None
         frame_offset = 0
+        in_pre = False
         ifg_cnt = 0
         deficit_idle_cnt = 0
         self.active = False
@@ -283,8 +284,16 @@ class XgmiiSource(Reset):
         if self.enable is not None:
             enable_event = RisingEdge(self.enable)
 
+        clk_period = 0
+        last_clk = 0
+
         while True:
             await clock_edge_event
+
+            sim_time = get_sim_time()
+            if last_clk:
+                clk_period = sim_time - last_clk
+            last_clk = sim_time
 
             if self.enable is None or int(self.enable.value):
                 if ifg_cnt + deficit_idle_cnt > self.byte_lanes-1 or (not self.enable_dic and ifg_cnt > 4):
@@ -304,7 +313,7 @@ class XgmiiSource(Reset):
                         self.queue_occupancy_bytes -= len(frame)
                         self.queue_occupancy_frames -= 1
                         self.current_frame = frame
-                        frame.sim_time_start = get_sim_time()
+                        frame.sim_time_start = sim_time
                         frame.sim_time_sfd = None
                         frame.sim_time_end = None
                         self.log.info("TX frame: %s", frame)
@@ -326,6 +335,7 @@ class XgmiiSource(Reset):
                         if self.byte_lanes > 4 and (ifg_cnt > min_ifg or self.force_offset_start):
                             ifg_cnt = ifg_cnt-4
                             frame.start_lane = 4
+                            frame.sim_time_start = sim_time + (clk_period // self.byte_lanes * 4)
                             frame.data = bytearray([XgmiiCtrl.IDLE]*4)+frame.data
                             frame.ctrl = [1]*4+frame.ctrl
 
@@ -334,6 +344,7 @@ class XgmiiSource(Reset):
                         ifg_cnt = 0
                         self.active = True
                         frame_offset = 0
+                        in_pre = True
                     else:
                         # clear counters
                         deficit_idle_cnt = 0
@@ -346,15 +357,17 @@ class XgmiiSource(Reset):
                     for k in range(self.byte_lanes):
                         if frame is not None:
                             d = frame.data[frame_offset]
-                            if frame.sim_time_sfd is None and d == EthPre.SFD:
-                                frame.sim_time_sfd = get_sim_time()
+                            if frame.sim_time_sfd is None and not in_pre:
+                                frame.sim_time_sfd = sim_time + (clk_period // self.byte_lanes * k)
+                            if d == EthPre.SFD:
+                                in_pre = False
                             d_val |= d << k*8
                             c_val |= frame.ctrl[frame_offset] << k
                             frame_offset += 1
 
                             if frame_offset >= len(frame.data):
                                 ifg_cnt = max(self.ifg - (self.byte_lanes-k), 0)
-                                frame.sim_time_end = get_sim_time()
+                                frame.sim_time_end = sim_time + (clk_period // self.byte_lanes * k)
                                 frame.handle_tx_complete()
                                 frame = None
                                 self.current_frame = None
@@ -472,6 +485,7 @@ class XgmiiSink(Reset):
 
     async def _run(self):
         frame = None
+        in_pre = False
         self.active = False
 
         clock_edge_event = RisingEdge(self.clock)
@@ -485,8 +499,16 @@ class XgmiiSink(Reset):
         idle_d = sum([XgmiiCtrl.IDLE << n*8 for n in range(self.byte_lanes)])
         idle_c = 2**self.byte_lanes-1
 
+        clk_period = 0
+        last_clk = 0
+
         while True:
             await clock_edge_event
+
+            sim_time = get_sim_time()
+            if last_clk:
+                clk_period = sim_time - last_clk
+            last_clk = sim_time
 
             if self.enable is None or int(self.enable.value):
                 data_val = int(self.data.value)
@@ -499,8 +521,9 @@ class XgmiiSink(Reset):
                         if c_val and d_val == XgmiiCtrl.START:
                             # start
                             frame = XgmiiFrame(bytearray([EthPre.PRE]), [0])
-                            frame.sim_time_start = get_sim_time()
+                            frame.sim_time_start = sim_time + (clk_period // self.byte_lanes * offset)
                             frame.start_lane = offset
+                            in_pre = True
                     else:
                         if c_val:
                             # got a control character; terminate frame reception
@@ -510,7 +533,7 @@ class XgmiiSink(Reset):
                                 frame.ctrl.append(c_val)
 
                             frame.compact()
-                            frame.sim_time_end = get_sim_time()
+                            frame.sim_time_end = sim_time + (clk_period // self.byte_lanes * offset)
                             self.log.info("RX frame: %s", frame)
 
                             self.queue_occupancy_bytes += len(frame)
@@ -521,8 +544,10 @@ class XgmiiSink(Reset):
 
                             frame = None
                         else:
-                            if frame.sim_time_sfd is None and d_val == EthPre.SFD:
-                                frame.sim_time_sfd = get_sim_time()
+                            if frame.sim_time_sfd is None and not in_pre:
+                                frame.sim_time_sfd = sim_time + (clk_period // self.byte_lanes * offset)
+                            if d_val == EthPre.SFD:
+                                in_pre = False
 
                             frame.data.append(d_val)
                             frame.ctrl.append(c_val)

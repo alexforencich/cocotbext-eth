@@ -167,6 +167,7 @@ class MiiSource(Reset):
         frame_offset = 0
         frame_data = None
         frame_error = None
+        in_pre = False
         ifg_cnt = 0
         self.active = False
 
@@ -208,11 +209,14 @@ class MiiSource(Reset):
 
                     self.active = True
                     frame_offset = 0
+                    in_pre = True
 
                 if frame is not None:
                     d = frame_data[frame_offset]
-                    if frame.sim_time_sfd is None and d == 0xD:
+                    if frame.sim_time_sfd is None and not in_pre:
                         frame.sim_time_sfd = get_sim_time()
+                    if d == 0xD:
+                        in_pre = False
                     self.data.value = d
                     if self.er is not None:
                         self.er.value = frame_error[frame_offset]
@@ -335,6 +339,7 @@ class MiiSink(Reset):
 
     async def _run(self):
         frame = None
+        in_pre = False
         self.active = False
 
         clock_edge_event = RisingEdge(self.clock)
@@ -358,6 +363,7 @@ class MiiSink(Reset):
                         # start of frame
                         frame = GmiiFrame(bytearray(), [])
                         frame.sim_time_start = get_sim_time()
+                        in_pre = True
                 else:
                     if not dv_val:
                         # end of frame
@@ -394,8 +400,10 @@ class MiiSink(Reset):
                         frame = None
 
                 if frame is not None:
-                    if frame.sim_time_sfd is None and d_val == 0xD:
+                    if frame.sim_time_sfd is None and not in_pre:
                         frame.sim_time_sfd = get_sim_time()
+                    if d_val == 0xD:
+                        in_pre = False
 
                     frame.data.append(d_val)
                     frame.error.append(er_val)

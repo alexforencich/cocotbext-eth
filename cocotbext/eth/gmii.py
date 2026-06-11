@@ -266,6 +266,7 @@ class GmiiSource(Reset):
         frame_offset = 0
         frame_data = None
         frame_error = None
+        in_pre = False
         ifg_cnt = 0
         self.active = False
 
@@ -275,8 +276,16 @@ class GmiiSource(Reset):
         if self.enable is not None:
             enable_event = RisingEdge(self.enable)
 
+        clk_period = 0
+        last_clk = 0
+
         while True:
             await clock_edge_event
+
+            sim_time = get_sim_time()
+            if last_clk:
+                clk_period = sim_time - last_clk
+            last_clk = sim_time
 
             if self.enable is None or int(self.enable.value):
                 if ifg_cnt > 0:
@@ -290,7 +299,7 @@ class GmiiSource(Reset):
                     self.queue_occupancy_bytes -= len(frame)
                     self.queue_occupancy_frames -= 1
                     self.current_frame = frame
-                    frame.sim_time_start = get_sim_time()
+                    frame.sim_time_start = sim_time
                     frame.sim_time_sfd = None
                     frame.sim_time_end = None
                     self.log.info("TX frame: %s", frame)
@@ -314,11 +323,14 @@ class GmiiSource(Reset):
 
                     self.active = True
                     frame_offset = 0
+                    in_pre = True
 
                 if frame is not None:
                     d = frame_data[frame_offset]
-                    if frame.sim_time_sfd is None and d in (EthPre.SFD, 0xD):
+                    if frame.sim_time_sfd is None and not in_pre:
                         frame.sim_time_sfd = get_sim_time()
+                    if d in (EthPre.SFD, 0xD):
+                        in_pre = False
                     self.data.value = d
                     if self.er is not None:
                         self.er.value = frame_error[frame_offset]
@@ -327,7 +339,7 @@ class GmiiSource(Reset):
 
                     if frame_offset >= len(frame_data):
                         ifg_cnt = max(self.ifg, 1)
-                        frame.sim_time_end = get_sim_time()
+                        frame.sim_time_end = sim_time
                         frame.handle_tx_complete()
                         frame = None
                         self.current_frame = None
@@ -444,6 +456,7 @@ class GmiiSink(Reset):
 
     async def _run(self):
         frame = None
+        in_pre = False
         self.active = False
 
         clock_edge_event = RisingEdge(self.clock)
@@ -454,8 +467,16 @@ class GmiiSink(Reset):
         if self.enable is not None:
             enable_event = RisingEdge(self.enable)
 
+        clk_period = 0
+        last_clk = 0
+
         while True:
             await clock_edge_event
+
+            sim_time = get_sim_time()
+            if last_clk:
+                clk_period = sim_time - last_clk
+            last_clk = sim_time
 
             if self.enable is None or int(self.enable.value):
                 d_val = int(self.data.value)
@@ -466,7 +487,8 @@ class GmiiSink(Reset):
                     if dv_val:
                         # start of frame
                         frame = GmiiFrame(bytearray(), [])
-                        frame.sim_time_start = get_sim_time()
+                        frame.sim_time_start = sim_time
+                        in_pre = True
                 else:
                     if not dv_val:
                         # end of frame
@@ -496,7 +518,7 @@ class GmiiSink(Reset):
                             frame.error = error
 
                         frame.compact()
-                        frame.sim_time_end = get_sim_time()
+                        frame.sim_time_end = sim_time
                         self.log.info("RX frame: %s", frame)
 
                         self.queue_occupancy_bytes += len(frame)
@@ -508,8 +530,10 @@ class GmiiSink(Reset):
                         frame = None
 
                 if frame is not None:
-                    if frame.sim_time_sfd is None and d_val in (EthPre.SFD, 0xD):
-                        frame.sim_time_sfd = get_sim_time()
+                    if frame.sim_time_sfd is None and not in_pre:
+                        frame.sim_time_sfd = sim_time
+                    if d_val in (EthPre.SFD, 0xD):
+                        in_pre = False
 
                     frame.data.append(d_val)
                     frame.error.append(er_val)

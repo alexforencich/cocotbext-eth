@@ -165,6 +165,7 @@ class RgmiiSource(Reset):
         frame_offset = 0
         frame_data = None
         frame_error = None
+        in_pre = False
         ifg_cnt = 0
         in_ifg = False
         self.active = False
@@ -231,6 +232,7 @@ class RgmiiSource(Reset):
 
                     self.active = True
                     frame_offset = 0
+                    in_pre = True
 
                 if frame is not None:
                     d = frame_data[frame_offset]
@@ -238,8 +240,10 @@ class RgmiiSource(Reset):
                     en = 1
                     frame_offset += 1
 
-                    if frame.sim_time_sfd is None and d in (EthPre.SFD, 0xD, 0xDD):
+                    if frame.sim_time_sfd is None and not in_pre:
                         frame.sim_time_sfd = get_sim_time()
+                    if d in (EthPre.SFD, 0xD, 0xDD):
+                        in_pre = False
 
                     if frame_offset >= len(frame_data):
                         ifg_cnt = max(self.ifg, 1)
@@ -358,6 +362,7 @@ class RgmiiSink(Reset):
 
     async def _run(self):
         frame = None
+        in_pre = False
         self.active = False
         d_val = 0
         dv_val = 0
@@ -392,6 +397,7 @@ class RgmiiSink(Reset):
                         # start of frame
                         frame = GmiiFrame(bytearray(), [])
                         frame.sim_time_start = get_sim_time()
+                        in_pre = True
                 else:
                     if not dv_val:
                         # end of frame
@@ -433,8 +439,10 @@ class RgmiiSink(Reset):
                         frame = None
 
                 if frame is not None:
-                    if frame.sim_time_sfd is None and d_val in (EthPre.SFD, 0xD, 0xDD):
+                    if frame.sim_time_sfd is None and not in_pre:
                         frame.sim_time_sfd = get_sim_time()
+                    if d_val in (EthPre.SFD, 0xD, 0xDD):
+                        in_pre = False
 
                     frame.data.append(d_val)
                     frame.error.append(er_val)
