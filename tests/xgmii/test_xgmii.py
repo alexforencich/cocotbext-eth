@@ -196,6 +196,35 @@ async def run_test_alignment(dut, payload_data=None, ifg=12, enable_dic=True,
     await RisingEdge(dut.clk)
 
 
+async def run_test_os(dut, enable_gen=False):
+
+    tb = TB(dut)
+
+    if enable_gen is not None:
+        tb.set_enable_generator(enable_gen())
+
+    await tb.reset()
+
+    for sig in [False, True]:
+        for k in range(24):
+            os = 1 << k
+
+            tb.source.set_os(os, sig)
+
+            for k in range(20):
+                await RisingEdge(dut.clk)
+
+            assert tb.sink.get_os() == (os, sig)
+
+            tb.source.set_os(None)
+
+            for k in range(20):
+                await RisingEdge(dut.clk)
+
+    for k in range(10):
+        await RisingEdge(dut.clk)
+
+
 def size_list():
     return list(range(60, 128)) + [512, 1514, 9214] + [60]*10 + [61]*10 + [62]*10 + [63]*10
 
@@ -224,6 +253,10 @@ if getattr(cocotb, 'top', None) is not None:
     factory.add_option("ifg", [12, 0])
     factory.add_option("enable_dic", [True, False])
     factory.add_option("force_offset_start", [False, True])
+    factory.add_option("enable_gen", [None, cycle_en])
+    factory.generate_tests()
+
+    factory = TestFactory(run_test_os)
     factory.add_option("enable_gen", [None, cycle_en])
     factory.generate_tests()
 

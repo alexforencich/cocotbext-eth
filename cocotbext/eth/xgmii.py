@@ -1,6 +1,6 @@
 """
 
-Copyright (c) 2020-2025 Alex Forencich
+Copyright (c) 2020-2026 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -147,7 +147,7 @@ class XgmiiSource(Reset):
 
         self.log.info("XGMII source")
         self.log.info("cocotbext-eth version %s", __version__)
-        self.log.info("Copyright (c) 2020-2025 Alex Forencich")
+        self.log.info("Copyright (c) 2020-2026 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
@@ -169,6 +169,9 @@ class XgmiiSource(Reset):
 
         self.queue_occupancy_limit_bytes = -1
         self.queue_occupancy_limit_frames = -1
+
+        self.os = None
+        self.os_sig = False
 
         self.width = len(self.data)
         self.byte_size = 8
@@ -242,9 +245,22 @@ class XgmiiSource(Reset):
         self.active_event.clear()
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
+        self.os = None
+        self.os_sig = False
 
     async def wait(self):
         await self.idle_event.wait()
+
+    def set_seq_os(self, os=None):
+        self.set_os(os, False)
+
+    def set_sig_os(self, os=None):
+        self.set_os(os, True)
+
+    def set_os(self, os=None, sig=False):
+        self.os = os
+        self.os_sig = sig
+        self.active_event.set()
 
     def _handle_reset(self, state):
         if state:
@@ -286,6 +302,8 @@ class XgmiiSource(Reset):
 
         clk_period = 0
         last_clk = 0
+
+        os = bytearray()
 
         while True:
             await clock_edge_event
@@ -349,11 +367,13 @@ class XgmiiSource(Reset):
                         # clear counters
                         deficit_idle_cnt = 0
                         ifg_cnt = 0
+                        self.active = False
+                        self.idle_event.set()
+
+                d_val = 0
+                c_val = 0
 
                 if frame is not None:
-                    d_val = 0
-                    c_val = 0
-
                     for k in range(self.byte_lanes):
                         if frame is not None:
                             d = frame.data[frame_offset]
@@ -377,13 +397,29 @@ class XgmiiSource(Reset):
 
                     self.data.value = d_val
                     self.ctrl.value = c_val
+                elif self.os is not None or os:
+                    for k in range(self.byte_lanes):
+                        if not os:
+                            if self.os:
+                                if self.os_sig:
+                                    d_val |= XgmiiCtrl.SIG_OS << k*8
+                                else:
+                                    d_val |= XgmiiCtrl.SEQ_OS << k*8
+                                c_val |= 1 << k
+                                os.extend(self.os.to_bytes(3, 'big'))
+                            else:
+                                d_val |= XgmiiCtrl.IDLE << k*8
+                                c_val |= 1 << k
+                        else:
+                            d_val |= os.pop(0) << k*8
+
+                    self.data.value = d_val
+                    self.ctrl.value = c_val
                 else:
                     self.data.value = self.idle_d
                     self.ctrl.value = self.idle_c
-                    self.active = False
 
-                    if ifg_cnt == 0 and self.queue.empty():
-                        self.idle_event.set()
+                    if not self.active and self.os is None:
                         self.active_event.clear()
                         await self.active_event.wait()
 
@@ -403,7 +439,7 @@ class XgmiiSink(Reset):
 
         self.log.info("XGMII sink")
         self.log.info("cocotbext-eth version %s", __version__)
-        self.log.info("Copyright (c) 2020-2025 Alex Forencich")
+        self.log.info("Copyright (c) 2020-2026 Alex Forencich")
         self.log.info("https://github.com/alexforencich/cocotbext-eth")
 
         super().__init__(*args, **kwargs)
@@ -414,6 +450,9 @@ class XgmiiSink(Reset):
 
         self.queue_occupancy_bytes = 0
         self.queue_occupancy_frames = 0
+
+        self.os = None
+        self.os_sig = False
 
         self.width = len(self.data)
         self.byte_size = 8
@@ -428,6 +467,11 @@ class XgmiiSink(Reset):
         self._run_cr = None
 
         self._init_reset(reset, reset_active_level)
+
+    def get_os(self):
+        ret = (self.os, self.os_sig)
+        self.os = None
+        return ret
 
     def _recv(self, frame, compact=True):
         if self.queue.empty():
@@ -502,6 +546,9 @@ class XgmiiSink(Reset):
         clk_period = 0
         last_clk = 0
 
+        os = None
+        os_sig = False
+
         while True:
             await clock_edge_event
 
@@ -516,6 +563,22 @@ class XgmiiSink(Reset):
                 for offset in range(self.byte_lanes):
                     d_val = (data_val >> (offset*8)) & 0xff
                     c_val = (ctrl_val >> offset) & 1
+
+                    # handle ordered sets
+                    if c_val:
+                        if d_val == XgmiiCtrl.SEQ_OS:
+                            os = bytearray()
+                            os_sig = False
+                        elif c_val and d_val == XgmiiCtrl.SIG_OS:
+                            os = bytearray()
+                            os_sig = True
+                    elif os is not None:
+                        os.append(d_val)
+                        if len(os) == 3:
+                            self.os = int.from_bytes(os, 'big')
+                            self.os_sig = os_sig
+                            self.log.info("RX %s ordered set: 0x%06x", "signal" if os_sig else "sequence", self.os)
+                            os = None
 
                     if frame is None:
                         if c_val and d_val == XgmiiCtrl.START:
