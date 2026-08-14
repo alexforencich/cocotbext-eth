@@ -266,8 +266,8 @@ if getattr(cocotb, 'top', None) is not None:
 tests_dir = os.path.dirname(__file__)
 
 
-@pytest.mark.parametrize("data_width", [32, 64])
-def test_xgmii(request, data_width):
+@pytest.mark.parametrize("data_w", [32, 64])
+def test_xgmii(request, data_w):
     dut = "test_xgmii"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -278,8 +278,8 @@ def test_xgmii(request, data_width):
 
     parameters = {}
 
-    parameters['DATA_WIDTH'] = data_width
-    parameters['CTRL_WIDTH'] = parameters['DATA_WIDTH'] // 8
+    parameters['DATA_W'] = data_w
+    parameters['CTRL_W'] = parameters['DATA_W'] // 8
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

@@ -34,12 +34,12 @@ TOPLEVEL = $(COCOTB_TOPLEVEL)
 VERILOG_SOURCES += $(DUT).v
 
 # module parameters
-export PARAM_PTP_TS_WIDTH := 96
-export PARAM_PTP_TAG_WIDTH := 16
-export PARAM_AXIS_DATA_WIDTH := 64
-export PARAM_AXIS_KEEP_WIDTH := $(shell expr $(PARAM_AXIS_DATA_WIDTH) / 8 )
-export PARAM_AXIS_TX_USER_WIDTH := $(shell expr $(PARAM_PTP_TAG_WIDTH) + 1 )
-export PARAM_AXIS_RX_USER_WIDTH := $(shell expr $(PARAM_PTP_TS_WIDTH) + 1 )
+export PARAM_PTP_TS_W := 96
+export PARAM_PTP_TAG_W := 16
+export PARAM_AXIS_DATA_W := 64
+export PARAM_AXIS_KEEP_W := $(shell expr $(PARAM_AXIS_DATA_W) / 8 )
+export PARAM_AXIS_TX_USER_W := $(shell expr $(PARAM_PTP_TAG_W) + 1 )
+export PARAM_AXIS_RX_USER_W := $(shell expr $(PARAM_PTP_TS_W) + 1 )
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

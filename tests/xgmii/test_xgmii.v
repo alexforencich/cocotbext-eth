@@ -31,16 +31,16 @@ THE SOFTWARE.
  */
 module test_xgmii #
 (
-    parameter DATA_WIDTH = 64,
-    parameter CTRL_WIDTH = (DATA_WIDTH/8)
+    parameter DATA_W = 64,
+    parameter CTRL_W = (DATA_W/8)
 )
 (
-    input  wire                   clk,
-    input  wire                   rst,
+    input  wire               clk,
+    input  wire               rst,
 
-    inout  wire [DATA_WIDTH-1:0]  xgmii_d,
-    inout  wire [CTRL_WIDTH-1:0]  xgmii_c,
-    inout  wire                   xgmii_clk_en
+    inout  wire [DATA_W-1:0]  xgmii_d,
+    inout  wire [CTRL_W-1:0]  xgmii_c,
+    inout  wire               xgmii_clk_en
 );
 
 endmodule

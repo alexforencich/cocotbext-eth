@@ -193,8 +193,8 @@ if getattr(cocotb, 'top', None) is not None:
 tests_dir = os.path.dirname(__file__)
 
 
-@pytest.mark.parametrize("data_width", [8, 32, 64, 512])
-def test_eth_mac(request, data_width):
+@pytest.mark.parametrize("data_w", [8, 32, 64, 512])
+def test_eth_mac(request, data_w):
     dut = "test_eth_mac"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -205,12 +205,12 @@ def test_eth_mac(request, data_width):
 
     parameters = {}
 
-    parameters['PTP_TS_WIDTH'] = 96
-    parameters['PTP_TAG_WIDTH'] = 16
-    parameters['AXIS_DATA_WIDTH'] = data_width
-    parameters['AXIS_KEEP_WIDTH'] = parameters['AXIS_DATA_WIDTH'] // 8
-    parameters['AXIS_TX_USER_WIDTH'] = parameters['PTP_TAG_WIDTH']+1
-    parameters['AXIS_RX_USER_WIDTH'] = parameters['PTP_TS_WIDTH']+1
+    parameters['PTP_TS_W'] = 96
+    parameters['PTP_TAG_W'] = 16
+    parameters['AXIS_DATA_W'] = data_w
+    parameters['AXIS_KEEP_W'] = parameters['AXIS_DATA_W'] // 8
+    parameters['AXIS_TX_USER_W'] = parameters['PTP_TAG_W']+1
+    parameters['AXIS_RX_USER_W'] = parameters['PTP_TS_W']+1
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 
