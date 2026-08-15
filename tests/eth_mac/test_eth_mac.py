@@ -33,7 +33,6 @@ import pytest
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
-from cocotb.regression import TestFactory
 
 from cocotbext.eth import EthMacFrame, EthMac, PtpClockSimTime
 from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink
@@ -104,6 +103,33 @@ class TB:
         await RisingEdge(self.dut.tx_clk)
 
 
+speed = [1e9]
+
+if getattr(cocotb, 'top', None) is not None:
+    if len(cocotb.top.tx_axis_tdata) == 8:
+        speed = [100e6, 1e9]
+    elif len(cocotb.top.tx_axis_tdata) == 32:
+        speed = [10e9]
+    elif len(cocotb.top.tx_axis_tdata) == 64:
+        speed = [10e9, 25e9]
+    elif len(cocotb.top.tx_axis_tdata) == 512:
+        speed = [100e9]
+
+
+def size_list():
+    return list(range(60, 128)) + [512, 1514, 9214] + [60]*10
+
+
+def incrementing_payload(length):
+    return bytearray(itertools.islice(itertools.cycle(range(256)), length))
+
+
+@cocotb.test()
+@cocotb.parametrize(
+    ("payload_lengths", [size_list]),
+    ("payload_data", [incrementing_payload]),
+    ("speed", speed),
+)
 async def run_test_tx(dut, payload_lengths=None, payload_data=None, ifg=12, speed=10e9):
 
     tb = TB(dut, speed)
@@ -131,6 +157,12 @@ async def run_test_tx(dut, payload_lengths=None, payload_data=None, ifg=12, spee
     await RisingEdge(dut.tx_clk)
 
 
+@cocotb.test()
+@cocotb.parametrize(
+    ("payload_lengths", [size_list]),
+    ("payload_data", [incrementing_payload]),
+    ("speed", speed),
+)
 async def run_test_rx(dut, payload_lengths=None, payload_data=None, ifg=12, speed=10e9):
 
     tb = TB(dut, speed)
@@ -158,34 +190,6 @@ async def run_test_rx(dut, payload_lengths=None, payload_data=None, ifg=12, spee
 
     await RisingEdge(dut.rx_clk)
     await RisingEdge(dut.rx_clk)
-
-
-def size_list():
-    return list(range(60, 128)) + [512, 1514, 9214] + [60]*10
-
-
-def incrementing_payload(length):
-    return bytearray(itertools.islice(itertools.cycle(range(256)), length))
-
-
-if getattr(cocotb, 'top', None) is not None:
-
-    if len(cocotb.top.tx_axis_tdata) == 8:
-        speed = [100e6, 1e9]
-    elif len(cocotb.top.tx_axis_tdata) == 32:
-        speed = [10e9]
-    elif len(cocotb.top.tx_axis_tdata) == 64:
-        speed = [10e9, 25e9]
-    elif len(cocotb.top.tx_axis_tdata) == 512:
-        speed = [100e9]
-
-    for test in [run_test_tx, run_test_rx]:
-
-        factory = TestFactory(test)
-        factory.add_option("payload_lengths", [size_list])
-        factory.add_option("payload_data", [incrementing_payload])
-        factory.add_option("speed", speed)
-        factory.generate_tests()
 
 
 # cocotb-test
