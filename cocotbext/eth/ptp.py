@@ -28,7 +28,7 @@ from fractions import Fraction
 
 import cocotb
 from cocotb.triggers import RisingEdge
-from cocotb.utils import get_sim_time
+from cocotb.utils import get_sim_time, get_sim_steps
 
 from .version import __version__
 from .reset import Reset
@@ -346,10 +346,12 @@ class PtpClockSimTime:
         clk_period = 0
         last_clk = 0
 
+        steps_per_ns = get_sim_steps(1, 'ns')
+
         while True:
             await clock_edge_event
 
-            sim_time = get_sim_time('fs')
+            sim_time = get_sim_time()
             if last_clk:
                 clk_period = sim_time - last_clk
             last_clk = sim_time
@@ -357,22 +359,22 @@ class PtpClockSimTime:
             # offset sim time such that it is the correct time going in to the next active edge
             cur_time = sim_time + clk_period
 
-            ts_ns, ts_fns = self.ctx.divmod(Decimal(cur_time).scaleb(-6), Decimal(1))
+            ts_ns, ts_fns = divmod(cur_time, steps_per_ns)
 
-            self.ts_rel_ns = int(ts_ns.to_integral_value()) & 0xffffffffffff
-            self.ts_rel_fns = int((ts_fns * Decimal(2**16)).to_integral_value())
+            self.ts_rel_ns = ts_ns
+            self.ts_rel_fns = (ts_fns * 2**32) // steps_per_ns
 
-            ts_s, ts_ns = self.ctx.divmod(ts_ns, Decimal(1000000000))
+            ts_s, ts_ns = divmod(ts_ns, 1000000000)
 
-            self.ts_tod_s = int(ts_s.scaleb(-9).to_integral_value())
-            self.ts_tod_ns = int(ts_ns.to_integral_value())
+            self.ts_tod_s = ts_s
+            self.ts_tod_ns = ts_ns
             self.ts_tod_fns = self.ts_rel_fns
 
             if self.ts_tod is not None:
-                self.ts_tod.value = (self.ts_tod_s << 48) | (self.ts_tod_ns << 16) | self.ts_tod_fns
+                self.ts_tod.value = (self.ts_tod_s << 48) | (self.ts_tod_ns << 16) | (self.ts_tod_fns >> 16)
 
             if self.ts_rel is not None:
-                self.ts_rel.value = (self.ts_rel_ns << 16) | self.ts_rel_fns
+                self.ts_rel.value = (self.ts_rel_ns << 16) | (self.ts_rel_fns >> 16)
 
             if self.pps is not None:
                 self.pps.value = int(self.last_ts_tod_s != self.ts_tod_s)
