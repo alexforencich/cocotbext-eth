@@ -26,6 +26,7 @@ from .version import __version__
 
 from .gmii import GmiiFrame, GmiiSource, GmiiSink, GmiiPhy
 from .mii import MiiSource, MiiSink, MiiPhy
+from .rmii import RmiiSource, RmiiSink, RmiiPhy
 from .rgmii import RgmiiSource, RgmiiSink, RgmiiPhy
 from .xgmii import XgmiiFrame, XgmiiSource, XgmiiSink
 from .eth_mac import EthMacFrame, EthMacTx, EthMacRx, EthMac
