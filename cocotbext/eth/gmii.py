@@ -561,14 +561,15 @@ class GmiiSink(Reset):
                             self.active_event.set()
 
                             frame = None
-                        else:
-                            if frame.sim_time_sfd is None and not in_pre:
-                                frame.sim_time_sfd = sim_time + (clk_period // self.byte_lanes * k)
-                            if d_val in (EthPre.SFD, 0xD):
-                                in_pre = False
 
-                            frame.data.append(d_val)
-                            frame.error.append(er_val)
+                    if frame is not None:
+                        if frame.sim_time_sfd is None and not in_pre:
+                            frame.sim_time_sfd = sim_time + (clk_period // self.byte_lanes * k)
+                        if d_val in (EthPre.SFD, 0xD):
+                            in_pre = False
+
+                        frame.data.append(d_val)
+                        frame.error.append(er_val)
 
                 if dv_in == 0:
                     await active_event

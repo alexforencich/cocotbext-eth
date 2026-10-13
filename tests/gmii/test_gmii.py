@@ -31,7 +31,7 @@ import sys
 import pytest
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, with_timeout
 from cocotb_tools.runner import get_runner
 
 from cocotbext.eth import GmiiFrame, GmiiSource, GmiiSink
@@ -133,6 +133,40 @@ async def run_test(dut, payload_lengths=None, payload_data=None, ifg=12, enable_
         assert rx_frame.get_payload() == test_data
         assert rx_frame.check_fcs()
         assert rx_frame.error is None
+
+    assert tb.sink.empty()
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+
+@cocotb.test()
+@cocotb.parametrize(
+    ("preamble_len", [7, 3, 0]),
+    ("first_error", [False, True]),
+    ("mii_sel", [False, True]),
+)
+async def run_test_rx_frame(dut, preamble_len=7, first_error=False, mii_sel=False):
+
+    tb = TB(dut)
+
+    tb.dut.gmii_mii_sel.value = mii_sel
+
+    await tb.reset()
+
+    test_data = incrementing_payload(60)
+    test_frame = GmiiFrame.from_payload(test_data)
+    test_frame.data = test_frame.data[7-preamble_len:]
+    test_frame.error = [int(first_error)] + [0]*(len(test_frame)-1)
+
+    await tb.source.send(test_frame)
+
+    rx_frame = await with_timeout(tb.sink.recv(), 10, "us")
+
+    assert rx_frame.data == test_frame.data
+    assert (rx_frame.error or [0]*len(rx_frame)) == test_frame.error
+    assert rx_frame.get_payload() == test_data
+    assert rx_frame.check_fcs()
 
     assert tb.sink.empty()
 
